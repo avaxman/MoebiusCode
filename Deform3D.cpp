@@ -10,6 +10,7 @@
 #include <igl/edge_topology.h>
 #include <hedra/triangulate_mesh.h>
 #include <hedra/polygonal_edge_topology.h>
+#include <hedra/EigenSolverWrapper.h>
 #include <igl/colon.h>
 #include <igl/setdiff.h>
 #include <igl/slice.h>
@@ -20,11 +21,9 @@
 #include "QuaternionOps.h"
 #include "DeformTraits.h"
 #include "PrescribeEdgeJumps.h"
-#include "QuadConstSolverPardiso.h"
+#include "QuadConstSolver.h"
 #include "UnitSphereMoebiusTraits.h"
 #include <set>
-#include "PardisoSolver.h"
-#include "CheckTraits.h"
 
 
 double ComputePlanarity(const RowVector3d& z1, const RowVector3d& z2,const RowVector3d& z3,const RowVector3d& z4)
@@ -289,10 +288,8 @@ void MoebiusDeformation3D::SetupMesh(const MatrixXd& InV, const MatrixXi& InD, c
     //cout<<"I:"<<I<<endl;
     //cout<<"J:"<<J<<endl;
     
-    d0Solver.set_pattern(I,J,VectorXd::Ones(I.rows(),1));
-    d0Solver.update_a(S);
-    d0Solver.analyze_pattern();
-    if(!d0Solver.factorize())
+    d0Solver.analyze(I,J);
+    if(!d0Solver.factorize(S))
         // decomposition failed
         cout<<"Solver Failed to factorize! "<<endl;
 
@@ -458,7 +455,7 @@ void GetMobiusCoeffs(RowVector4d& a, RowVector4d& b, RowVector4d& c, RowVector4d
     usmt.InitSolution=InitSolution;
     usmt.Initialize(qzu,qwu,InitSolution);
     
-    QuadConstSolverPardiso<UnitSphereMoebiusTraitsTraits> qcs;
+    QuadConstSolver<UnitSphereMoebiusTraitsTraits> qcs;
     qcs.Initialize(&usmt);
     VectorXd Solution=qcs.Solve(InitSolution, 1.0, 1000);
     RowVector4d ua,ub,uc,ud;
@@ -710,7 +707,7 @@ void MoebiusDeformation3D::Interpolate(double t, int NumIterations)
     igl::slice(CompMat, LocalVarIndices, 2, CompMatVar);
     
     
-    VectorXd InitialMobCoeffs=PardisoLinearSolve(CompMatVar.adjoint()*CompMatVar,CompMatVar.adjoint()*Rhs);
+    VectorXd InitialMobCoeffs=EigenSingleSolveWrapper<Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>>(CompMatVar.adjoint()*CompMatVar,CompMatVar.adjoint()*Rhs);
     
     cout<<"Initial solution g^t->(c,d) Error: "<<(CompMatVar*InitialMobCoeffs-Rhs).lpNorm<Infinity>()<<endl;
     

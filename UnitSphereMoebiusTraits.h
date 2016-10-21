@@ -12,8 +12,6 @@
 
 
 #include "QuaternionOps.h"
-#include "AuxSparse.h"
-
 
 
 //both meshes have to be on the same unit sphere, 3 points interpolating, and the rest have the same radius

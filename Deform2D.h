@@ -11,7 +11,7 @@
 
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
-#include "QuadConstSolverPardiso.h"
+#include "QuadConstSolver.h"
 #include "DeformTraits.h"
 #include "PrescribeEdgeJumps.h"
 
@@ -87,10 +87,10 @@ public:
     
     //optimization operators
     DeformTraitsEdgeDeviation2D DeformTraits;
-    QuadConstSolverPardiso<DeformTraitsEdgeDeviation2D> DeformSolver;
+    QuadConstSolver<DeformTraitsEdgeDeviation2D> DeformSolver;
     
     PrescribeEdgeJumps2D InterpTraits;
-    QuadConstSolverPardiso<PrescribeEdgeJumps2D> InterpSolver;
+    QuadConstSolver<PrescribeEdgeJumps2D> InterpSolver;
     
     Vector3i DeformGlobalVertices;    //three points going to others
     Vector2cd DeformGlobalMoebius;  //the global mobius (c,d)

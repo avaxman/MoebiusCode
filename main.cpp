@@ -8,42 +8,24 @@
 #include "Deform2D.h"
 #include "math.h"
 #include "QuaternionOps.h"
-#include "Comparisons.h"
 #include "igl/serialize.h"
-//#include <igl/xml/XMLSerializer.h>
-//#include <igl/xml/XMLSerialization.h>
-#include "Comparisons.h"
-#include "POVRay.h"
 #include <igl/sortrows.h>
 #include <igl/readOBJ.h>
 #include <igl/writeOBJ.h>
 #include <hedra/polygonal_read_OFF.h>
 #include <hedra/triangulate_mesh.h>
 #include <hedra/polygonal_edge_topology.h>
-//#include <hedra/writePolygonalOFF.h>
-#include "lodepng.h"
 #include <igl/per_vertex_normals.h>
-#include "QuaternionOps.h"
 #include <algorithm>
 
 using namespace Eigen;
 using namespace std;
-
-// AntTweakBar
-//TwBar* AlgorithmBar;
-
-#define IGL_VIEWER_WITH_NANOGUI 1
-
 
 typedef enum {ORIGINAL, DEFORMATION, INTERPOLATION} EditingModes;
 EditingModes EditingMode=DEFORMATION;
 
 typedef enum {STANDARD, MC_ERROR, IA_ERROR, FACE_CONCYCLITY, FACE_MC, QC_ERROR, AREA_ERROR, SMALLK_ERROR} ViewingModes;
 ViewingModes ViewingMode=STANDARD;
-
-typedef enum {PROJECTION_AMAP, PROJECTION_FF, PROJECTION_ST, PROJECTION_SU, PROJECTION_LSCM, PROJECTION_BD, PROJECTION_CETM, PROJECTION_ASAP, PROJECTION_BIHARMONIC} ProjectionModes;
-ProjectionModes ProjectionMode=PROJECTION_AMAP;
-
 
 #define NUM_INTERPOLATION_STEPS 20
 #define NUM_RIGID_STEPS 10
@@ -56,7 +38,6 @@ Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> R, G, B;
 
 
 igl::viewer::Viewer MobiusViewer;
-
 
 // Mesh
 Eigen::MatrixXd V;
@@ -81,7 +62,6 @@ MatrixXd TC;
 
 
 bool Deforming=false;
-
 
 std::vector<int> ConstIndices;
 std::vector<Vector3d> ConstPoses;
@@ -108,44 +88,6 @@ MoebiusDeformation2D md2;
 MoebiusDeformation3D md3;
 
 
-
-class State : public igl::Serializable
-{
-public:
-
-    void InitSerialization()
-    {
-        this->Add(ConstIndices  , "ConstIndices");
-        this->Add(ConstPoses  , "ConstPoses");
-        this->Add(RigidRatio  , "RigidRatio");
-        this->Add(MCSensitivity  , "MCSensitivity");
-        this->Add(IAPSensitivity  , "IAPSensitivity");
-        this->Add(QCSensitivity  , "QCSensitivity");
-        this->Add(CircSensitivity  , "CircSensitivity");
-    }
-};
-
-void LoadTexture()
-{
-    char buffer[1024];
-    get_open_file_path(buffer);
-    unsigned char* RawImage;
-    unsigned int w,h;
-    lodepng_decode32_file(&RawImage, &w, &h,buffer);
-    R.resize(w,h), G.resize(w,h), B.resize(w,h);
-    for (int j=0;j<h;j++)
-        for (int i=0;i<w;i++){
-            R(i,j)=(char)RawImage[4*((h-j)*h+i)+0];
-            G(i,j)=(char)RawImage[4*((h-j)*h+i)+1];
-            B(i,j)=(char)RawImage[4*((h-j)*h+i)+2];
-        }
-    
-    //viewer.data.set_texture(R,G,B);
-    Loadedtexture=true;
-    //cout<<"R: "<<R.row(w/2).cast<int>()<<endl;
-}
-
-
 MatrixXd Scalar2RGB(const VectorXd ScalarValues)
 {
     MatrixXd Result(ScalarValues.size(),3);
@@ -166,278 +108,6 @@ MatrixXd Scalar2RGB(const VectorXd ScalarValues)
     }
     return Result;
 }
-
-
-
-
-void WriteRenderingScripts()
-{
-    
-    Matrix3d EndColors; EndColors<<0.0, 0.5, 1.0, 1.0, 1.0, 0.0, 1.0, 0, 0;
-    char buffer[1024];
-    get_open_file_path(buffer);
-    ifstream FileName;
-    FileName.open(buffer);
-    
-    cout<<"CameraPos: "<<MobiusViewer.core.camera_eye.cast<double>();
-    cout<<"CameraTarget: "<<MobiusViewer.core.camera_center.cast<double>();
-    cout<<"CameraUp: "<<MobiusViewer.core.camera_up.cast<double>();
-    cout<<"CameraAngle: "<<MobiusViewer.core.camera_view_angle;
-    
-    Scene s;
-    FileName>>s.CameraPos(0)>>s.CameraPos(1)>>s.CameraPos(2);
-    FileName>>s.CameraTarget(0)>>s.CameraTarget(1)>>s.CameraTarget(2);
-    FileName>>s.CameraUp(0)>>s.CameraUp(1)>>s.CameraUp(2);
-    FileName>>s.CameraAngle;
-    int NumLights;
-    FileName>>NumLights;
-    s.LightPoses.resize(NumLights,3);
-    for (int i=0;i<NumLights;i++)
-        FileName>>s.LightPoses(i,0)>>s.LightPoses(i,1)>>s.LightPoses(i,2);
-    
-    FileName>>s.Alpha>>s.AmbientFactor>>s.DiffuseFactor>>s.Phong>>s.PhongSize>>s.EdgeWidth>>s.SphereSize>>s.LightRadius>>s.LightFalloff>>s.LightArea;
-    FileName>>s.FaceColor(0)>>s.FaceColor(1)>>s.FaceColor(2);
-    FileName>>s.MCSensitivity>>s.IAPSensitivity>>s.QCSensitivity>>s.CircSensitivity;
-    
-    int IntIsTexture;
-    FileName>>IntIsTexture;
-    s.isTexture=(IntIsTexture==1);
-    if (s.isTexture)
-        FileName>>s.TextureName;
-    
-    FileName.close();
-    
-    s.isPlane=false;
-    
-    Scene sEdge=s;
-    sEdge.EdgeWidth=0;
-    sEdge.SphereSize=0;
-    sEdge.isTexture=false;
-    
-    Scene sNoTexture=s;
-    sNoTexture.isTexture=false;
-    
-    MatrixXd OrigPoses(ConstPoses.size(),3);
-    MatrixXd DeformPoses(ConstPoses.size(),3);
-    for (int i=0;i<ConstPoses.size();i++){
-        OrigPoses.row(i)=(IS_COMPLEX ? md2.OrigV.row(ConstIndices[i]) : md3.OrigV.row(ConstIndices[i]));
-        DeformPoses.row(i)=(IS_COMPLEX ? md2.DeformV.row(ConstIndices[i]) : md3.DeformV.row(ConstIndices[i]));
-    }
-    
-    //Quasiconformal error
-    VectorXd DeformQCError;
-    
-    if (!IS_COMPLEX){  //computing normals and affine maps
-        DeformQCError.resize(md3.tF.rows());
-        for (int i=0;i<md3.tF.rows();i++){
-            Vector3d p01=md3.OrigV.row(md3.tF(i,1))-md3.OrigV.row(md3.tF(i,0));
-            Vector3d p12=md3.OrigV.row(md3.tF(i,2))-md3.OrigV.row(md3.tF(i,1));
-            Vector3d p20=md3.OrigV.row(md3.tF(i,0))-md3.OrigV.row(md3.tF(i,2));
-            
-            Vector3d d01=md3.DeformV.row(md3.tF(i,1))-md3.DeformV.row(md3.tF(i,0));
-            Vector3d d12=md3.DeformV.row(md3.tF(i,2))-md3.DeformV.row(md3.tF(i,1));
-            Vector3d d20=md3.DeformV.row(md3.tF(i,0))-md3.DeformV.row(md3.tF(i,2));
-            
-            Vector3d i01=md3.InterpV.row(md3.tF(i,1))-md3.InterpV.row(md3.tF(i,0));
-            Vector3d i12=md3.InterpV.row(md3.tF(i,2))-md3.InterpV.row(md3.tF(i,1));
-            Vector3d i20=md3.InterpV.row(md3.tF(i,0))-md3.InterpV.row(md3.tF(i,2));
-            
-            Vector3d np=(p12.cross(p01)).normalized();
-            Vector3d nd=(d12.cross(d01)).normalized();
-            Vector3d ni=(i12.cross(i01)).normalized();
-            
-            Matrix3d pMat; pMat<<p01, p12, np;
-            Matrix3d dMat; dMat<<d01, d12, nd;
-            Matrix3d iMat; iMat<<i01, i12, ni;
-            
-            Matrix3d Ad=pMat*dMat.inverse();
-            Matrix3d Ai=pMat*iMat.inverse();
-            
-            JacobiSVD<Matrix3d> svdd(Ad);
-            Vector3d Singsd=(svdd.singularValues());
-            Vector2d TrueSingsd;
-            TrueSingsd.setOnes();
-            int Count=0;
-            for (int i=0;i<3;i++)
-                if (abs(Singsd(i)-1.0)>10e-5)
-                    TrueSingsd(Count++)=abs(Singsd(i));
-            
-            //cout<<"Sings: "<<Sings<<endl;
-            //cout<<"True Sings: "<<TrueSings<<endl;
-            DeformQCError(i)=(abs(max(TrueSingsd(0),TrueSingsd(1))/min(TrueSingsd(0),TrueSingsd(1))-1.0))/s.QCSensitivity;
-            
-        }
-    } else {
-        DeformQCError.resize(md2.F.rows());
-        for (int i=0;i<md2.F.rows();i++){
-            Vector2d p01=md2.OrigV.row(md2.tF(i,1)).head(2)-md2.OrigV.row(md2.tF(i,0)).head(2);
-            Vector2d p12=md2.OrigV.row(md2.tF(i,2)).head(2)-md2.OrigV.row(md2.tF(i,1)).head(2);
-            
-            Vector2d d01=md2.DeformV.row(md2.tF(i,1)).head(2)-md2.DeformV.row(md2.tF(i,0)).head(2);
-            Vector2d d12=md2.DeformV.row(md2.tF(i,2)).head(2)-md2.DeformV.row(md2.tF(i,1)).head(2);
-            
-            Vector2d i01=md2.InterpV.row(md2.tF(i,1)).head(2)-md2.InterpV.row(md2.tF(i,0)).head(2);
-            Vector2d i12=md2.InterpV.row(md2.tF(i,2)).head(2)-md2.InterpV.row(md2.tF(i,1)).head(2);
-            
-            Matrix2d pMat; pMat<<p01, p12;
-            Matrix2d dMat; dMat<<d01, d12;
-            Matrix2d iMat; iMat<<i01, i12;
-            
-            Matrix2d Ad=pMat*dMat.inverse();
-            Matrix2d Ai=pMat*iMat.inverse();
-            
-            JacobiSVD<Matrix2d> svdd(Ad);
-            Vector2d TrueSingsd=(svdd.singularValues());
-            
-            double smin=min(TrueSingsd(0),TrueSingsd(1));
-            double smax=max(TrueSingsd(0),TrueSingsd(1));
-            double Bigk=smax/smin;
-            
-            DeformQCError(i)=(abs(Bigk-1.0))/s.QCSensitivity;
-        }
-    }
-    
-    cout<<"Max DeformQCError: "<<DeformQCError.maxCoeff()*s.QCSensitivity<<endl;
-    cout<<"Mean DeformQCError: "<<DeformQCError.mean()*s.QCSensitivity<<endl;
-    
-    
-    
-    /********************writing original mesh**************/
-    
-    //original mesh
-    
-    MatrixXd SaveOrigV=(IS_COMPLEX ? md2.OrigV : md3.OrigV);
-    MatrixXi SaveF=(IS_COMPLEX ? md2.tF : md3.tF);
-    MatrixXi SaveEdgeF=(IS_COMPLEX ? md2.EdgeF : md3.EdgeF);
-    MatrixXd SaveDeformV=(IS_COMPLEX ? md2.DeformV : md3.DeformV);
-    MatrixXd SaveEdgeDeformV=(IS_COMPLEX ? md2.EdgeDeformV : md3.EdgeDeformV);
-    MatrixXi SaveE2V=(IS_COMPLEX ? md2.E2V : md3.E2V);
-    
-    VectorXd FaceValues;
-    std::string OrigFileName=std::string(buffer)+"-orig.pov";
-    ExportPOVRay(OrigFileName, sNoTexture, SaveOrigV,SaveF, TC, FTC, FaceValues, false, SaveE2V, OrigPoses, EndColors, !IS_COMPLEX);
-    
-    if (s.isTexture){
-        //original mesh - texture
-        cout<<"Current UV:"<<UV.row(0)<<endl;
-        std::string OrigTextureFileName=std::string(buffer)+"-orig-texture.pov";
-        ExportPOVRay(OrigTextureFileName, s, SaveOrigV,SaveF, TC, FTC,FaceValues, true, SaveE2V, OrigPoses, EndColors, false);
-    }
-    
-    
-    
-    /*****************writing deformed mesh***************/
-    
-    //deformed mesh
-     std::string DeformFileName=std::string(buffer)+"-deform.pov";
-     ExportPOVRay(DeformFileName, sNoTexture, SaveDeformV,SaveF, TC, FTC,FaceValues, false, SaveE2V, DeformPoses, EndColors,!IS_COMPLEX);
-    
-     //deformed mesh - QC Error
-     FaceValues=DeformQCError;
-     std::string DeformQCFileName=std::string(buffer)+"-deform-qc.pov";
-     ExportPOVRay(DeformQCFileName, sNoTexture, SaveDeformV,SaveF, TC, FTC,FaceValues, true, SaveE2V, DeformPoses,EndColors,false);
-     
-     if (s.isTexture){
-         //deformed mesh - texture
-         std::string DeformTextureFileName=std::string(buffer)+"-deform-texture.pov";
-         ExportPOVRay(DeformTextureFileName, s, SaveDeformV,SaveF, TC, FTC,FaceValues, true, SaveE2V, DeformPoses,EndColors,false);
-     }
-     
-     //FaceValues.resize(AbsDeformQuotient.rows()*2);
-     
-    
-     //writing histogram files
-     
-     /*ofstream DeformMCErrorFile;
-     std::string DeformMCErrorFileName=std::string(buffer)+"-deform-MC-hist-Errors.txt";
-     DeformMCErrorFile.open(DeformMCErrorFileName);
-     DeformMCErrorFile<<"1.0"<<endl<<"20"<<endl;
-     for (int i=0;i<AbsDeformQuotient.size();i++)
-     DeformMCErrorFile<<AbsDeformQuotient(i)<<endl;
-     
-     DeformMCErrorFile.close();
-     
-     ofstream InterpMCErrorFile;
-     std::string InterpMCErrorFileName=std::string(buffer)+"-interp-MC-hist-Errors.txt";
-     InterpMCErrorFile.open(InterpMCErrorFileName);
-     InterpMCErrorFile<<"1.0"<<endl<<"20"<<endl;
-     for (int i=0;i<AbsInterpQuotient.size();i++)
-     InterpMCErrorFile<<AbsInterpQuotient(i)<<endl;
-     
-     InterpMCErrorFile.close();
-     
-     
-     ofstream DeformIAPErrorFile;
-     std::string DeformIAPErrorFileName=std::string(buffer)+"-deform-IAP-hist-Errors.txt";
-     DeformIAPErrorFile.open(DeformIAPErrorFileName);
-     DeformIAPErrorFile<<"1.0"<<endl<<"20"<<endl;
-     for (int i=0;i<AngleDeformDiff.size();i++)
-     DeformIAPErrorFile<<AngleDeformDiff(i)<<endl;
-     
-     DeformIAPErrorFile.close();
-     
-     ofstream InterpIAPErrorFile;
-     std::string InterpIAPErrorFileName=std::string(buffer)+"-interp-IAP-hist-Errors.txt";
-     InterpIAPErrorFile.open(InterpIAPErrorFileName);
-     InterpIAPErrorFile<<"1.0"<<endl<<"20"<<endl;
-     for (int i=0;i<AngleInterpDiff.size();i++)
-     InterpIAPErrorFile<<AngleInterpDiff(i)<<endl;
-     
-     InterpIAPErrorFile.close();
-     
-     ofstream DeformQCErrorFile;
-     std::string DeformQCErrorFileName=std::string(buffer)+"-deform-QC-hist-Errors.txt";
-     DeformQCErrorFile.open(DeformQCErrorFileName);
-     DeformQCErrorFile<<"1.0"<<endl<<"20"<<endl;
-     for (int i=0;i<DeformQCError.size();i++)
-     DeformQCErrorFile<<DeformQCError(i)<<endl;
-     
-     DeformQCErrorFile.close();
-     
-     ofstream InterpQCErrorFile;
-     std::string InterpQCErrorFileName=std::string(buffer)+"-interp-QC-hist-Errors.txt";
-     InterpQCErrorFile.open(InterpQCErrorFileName);
-     InterpQCErrorFile<<"1.0"<<endl<<"20"<<endl;
-     for (int i=0;i<InterpQCError.size();i++)
-     InterpQCErrorFile<<InterpQCError(i)<<endl;
-     
-     InterpQCErrorFile.close();
-     
-     ofstream DeformCircErrorFile;
-     std::string DeformCircErrorFileName=std::string(buffer)+"-deform-Circ-hist-Errors.txt";
-     DeformCircErrorFile.open(DeformCircErrorFileName);
-     DeformCircErrorFile<<"1.0"<<endl<<"20"<<endl;
-     for (int i=0;i<DeformCircularity.size();i++)
-     DeformCircErrorFile<<DeformCircularity(i)<<endl;
-     
-     DeformCircErrorFile.close();
-     
-     ofstream InterpCircErrorFile;
-     std::string InterpCircErrorFileName=std::string(buffer)+"-interp-Circ-hist-Errors.txt";
-     InterpCircErrorFile.open(InterpCircErrorFileName);
-     InterpCircErrorFile<<"1.0"<<endl<<"20"<<endl;
-     for (int i=0;i<InterpCircularity.size();i++)
-     InterpCircErrorFile<<InterpCircularity(i)<<endl;
-     
-     InterpCircErrorFile.close();
-     
-     if (IS_COMPLEX){
-     
-     ofstream SmallkErrorFile;
-     std::string SmallkErrorFileName=std::string(buffer)+"-Smallk-hist-Errors.txt";
-     SmallkErrorFile.open(SmallkErrorFileName);
-     SmallkErrorFile<<"1.0"<<endl<<"20"<<endl;
-     for (int i=0;i<DeformSmallkError.size();i++)
-     SmallkErrorFile<<DeformSmallkError(i)<<endl;
-     
-     SmallkErrorFile.close();
-     }*/
-    
-    
-}
-
-
-
 
 
 void UpdateCurrentView()
@@ -864,104 +534,12 @@ void ReadGeneralOff(const std::string str, MatrixXd& V, VectorXi& D, MatrixXi& F
 
 }
 
-void LoadExternalDeformation()
-{
-    char buffer[1024];
-    get_open_file_path(buffer);
-    hedra::polygonal_read_OFF(buffer, V, D, F);
-    if (IS_COMPLEX){
-        md2.DeformV=V;
-        Coords2Complex(V,md2.DeformVc);
-        ComputeCR(md2.DeformVc, md2.D, md2.F, md2.QuadVertexIndices, md2.DeformECR, md2.DeformFCR);
-        
-        MatrixXd Centers(F.rows(),3); Centers.setZero();
-        for (int i=0;i<F.rows();i++)
-            for (int j=0;j<D(i);j++)
-                Centers.row(i)+=md2.OrigV.row(D(i,j))/(double)D(i);
-        
-        md2.EdgeDeformV<<md2.DeformV, Centers;
-        
-    } else {
-        md3.DeformV=V;
-        Coords2Quat(V, md3.DeformVq);
-        ComputeCR(md3.DeformVq, md3.D, md3.F,  md3.QuadVertexIndices, md3.DeformECR, md3.DeformFCR);
-        
-        MatrixXd Centers(F.rows(),3); Centers.setZero();
-        for (int i=0;i<F.rows();i++)
-            for (int j=0;j<D(i);j++)
-                Centers.row(i)+=md3.OrigV.row(F(i,j))/(double)D(i);
-        
-        md3.EdgeDeformV<<md3.DeformV, Centers;
-        
-    }
-    RecomputeInterpolation=true;
-    UpdateCurrentView();
-    
-}
-
-void SaveAllMeshes()
-{
-    char buffer[1024];
-    get_open_file_path(buffer);
-    std::string OFFDeformFileName=std::string(buffer)+"-deform.off";
-    SaveGeneralOff(OFFDeformFileName, md3.DeformV, md3.D, md3.F);
-    //std::string OBJDeformFileName=std::string(buffer)+"-deform.obj";
-    //SaveOBJ(OBJDeformFileName, md3.DeformV, md3.D, md3.tF);
-    //saving deformation mesh
-    /*char buffer[1024];
-     get_open_file_path(buffer);
-     
-     if (IS_COMPLEX){
-     
-     //save off files
-     std::string OrigFileName=std::string(buffer)+"-orig.off";
-     SaveGeneralOff(OrigFileName, md2.OrigV, md2.gF);
-     
-     std::string DeformFileName=std::string(buffer)+"-deform.off";
-     SaveGeneralOff(DeformFileName, md2.DeformV, md2.gF);
-     
-     //creating all interpolations and saving them
-     
-     cout<<"Saving Interpolations..."<<endl;
-     
-     for (double t=0;t<=1.0;t+=0.05){
-     cout<<"Saving Interpolation Time: "<<t<<endl;
-     md2.Interpolate(t, 500, RigidRatio);
-     std::string InterpFileName=std::string(buffer)+"-interp-"+std::to_string((int)(t*20))+".off";
-     SaveGeneralOff(InterpFileName, md2.InterpV, md2.gF);
-     }
-     }*/
-}
-
-
 
 
 bool key_down(igl::viewer::Viewer& viewer, unsigned char key, int modifiers)
 {
     switch(key)
     {
-        case 'L':
-            LoadExternalDeformation();
-            break;
-            
-        case 'R':
-            WriteRenderingScripts();
-            break;
-            
-        case 'I':
-            SaveAllMeshes();
-            break;
-            
-        case 'S':{
-            //State saved_state;
-            //char buffer[1024];
-            //get_save_file_path(buffer);
-            //igl::serializer serializer_save("Mesh_state");
-            //serializer.Add(saved_state,"State");
-            //serializer_save.Save(buffer,true);
-            break;
-        }
-            
         case 'X':{
             char buffer[1024];
             get_save_file_path(buffer);
@@ -991,33 +569,6 @@ bool key_down(igl::viewer::Viewer& viewer, unsigned char key, int modifiers)
             break;
         }
 
-            
-        case 'O':{
-            State loaded_state;
-            char buffer[1024];
-            get_open_file_path(buffer);
-            /*igl::XMLSerializer serializer_load("Mesh_state");
-            serializer_load.Add(loaded_state,"State");
-            serializer_load.Load(buffer);*/
-            
-            
-            MatrixXd ConstPosesMat(ConstPoses.size(),3);
-            for (int i=0;i<ConstPoses.size();i++)
-                ConstPosesMat.row(i)=ConstPoses[i];
-            
-            VectorXi EConstIndices(ConstIndices.size());
-            for (int i=0;i<ConstIndices.size();i++)
-                EConstIndices(i)=ConstIndices[i];
-            
-            
-            (IS_COMPLEX ? md2.InitDeformation(EConstIndices, isExactMC, isExactIAP, RigidRatio): md3.InitDeformation(EConstIndices, isExactMC, isExactIAP, RigidRatio));
-            
-            (IS_COMPLEX ? md2.UpdateDeformation(ConstPosesMat,1000, isExactMC, isExactIAP) : md3.UpdateDeformation(ConstPosesMat,1000));
-            CurrActiveHandle=(int)(ConstIndices.size()-1);
-            UpdateCurrentView();
-            break;
-        }
-            
         case 'V':{
             UV.array()*=1.05;
             cout<<"Pressed V:"<<endl;
@@ -1338,151 +889,7 @@ void SetSmallkCallback(double value)
 
 
 
-
-void SetProjectionCallback(ProjectionModes value)
-{
-    //cout<<"F: "<<F<<endl;
-    ProjectionMode = value;
-    MatrixXd Result;
-    if (IS_COMPLEX)
-        Result.resize(md3.DeformV.rows(), 2);
-    else
-        Result.resize(md3.DeformV.rows(), 3);
-    
-    VectorXi EConstIndices(ConstIndices.size());
-    MatrixXd ConstPosesMat;
-    if (IS_COMPLEX)
-        ConstPosesMat.resize(ConstPoses.size(),2);
-    else
-        ConstPosesMat.resize(ConstPoses.size(),3);
-    
-    MatrixXd AllConstPoses=md3.DeformV;
-    VectorXi AllIndices(md3.OrigV.rows());
-    for (int i=0;i<md3.OrigV.rows();i++)
-        AllIndices(i)=i;
-    
-    
-    //PROJECTION_FF, PROJECTION_ST, PROJECTION_SU, PROJECTION_LSCM, PROJECTION_BD, PROJECTION_CETM, PROJECTION_ASAP
-    switch (ProjectionMode){
-        case PROJECTION_AMAP:
-            //md3.InitDeformation(AllIndices);
-            //md3.UpdateDeformation(AllConstPoses, 200, false, false, 5.0);
-            break;
-            
-            //case PROJECTION_MC:
-            //md3.InitDeformation(AllIndices);
-            //md3.UpdateDeformation(AllConstPoses, 200, true, false, RigidRatio);
-            //   break;
-            
-            //case PROJECTION_IAP:
-            //    break;
-            
-        case PROJECTION_FF:
-            ProjectTang(md3.DeformV,Result, md3.F, md3.E2V);
-            md3.DeformV=Result;
-            break;
-            
-        case PROJECTION_ST:
-            ProjectCrane(md3.OrigV, md3.DeformV,Result, md3.tF, md3.E2V);
-            md3.DeformV=Result;
-            break;
-            
-        case PROJECTION_SU:
-            ProjectShapeUp(md3.DeformV,Result, md3.F, md3.E2V);
-            md3.DeformV=Result;
-            break;
-            
-        case PROJECTION_LSCM:
-            for (int i=0;i<ConstIndices.size();i++)
-                EConstIndices(i)=ConstIndices[i];
-            
-            for (int i=0;i<ConstPoses.size();i++)
-                ConstPosesMat.row(i)=ConstPoses[i].head(2);
-            
-            FindLSCM(md2.OrigV, EConstIndices, ConstPosesMat, Result, md2.tF);
-            md2.DeformV.setZero();
-            md2.DeformV.block(0,0,md2.DeformV.rows(),2)=Result;
-            break;
-            
-        case PROJECTION_BD:
-            InterpolateChen(md2.OrigV, md2.DeformV, Result, md2.tF,  InterpScalar);
-            md2.DeformV.setZero();
-            md2.DeformV.block(0,0,md2.DeformV.rows(),2)=Result;
-            break;
-            
-        case PROJECTION_CETM:
-            FindSpringbornMC(md2.OrigV, md2.DeformV, Result, md2.tF);
-            md2.DeformV.setZero();
-            md2.DeformV.block(0,0,md2.DeformV.rows(),2)=Result;
-            break;
-            
-        case PROJECTION_ASAP:
-            
-            for (int i=0;i<ConstIndices.size();i++)
-                EConstIndices(i)=ConstIndices[i];
-            
-            for (int i=0;i<ConstPoses.size();i++)
-                ConstPosesMat.row(i)=ConstPoses[i];
-            
-            ProjectASAP(md3.OrigV, Result, md3.tF, md3.E2V, EConstIndices, ConstPosesMat);
-            md3.DeformV=Result;
-            break;
-            
-        case PROJECTION_BIHARMONIC:
-            
-            for (int i=0;i<ConstIndices.size();i++)
-                EConstIndices(i)=ConstIndices[i];
-            
-            for (int i=0;i<ConstPoses.size();i++)
-                ConstPosesMat.row(i)=ConstPoses[i];
-            
-            ProjectBBW(md3.OrigV, Result, md3.tF, md3.E2V, EConstIndices, ConstPosesMat);
-            md3.DeformV=Result;
-            break;
-    }
-    
-    if (IS_COMPLEX){
-        V=md2.DeformV;
-        Coords2Complex(md2.DeformV, md2.DeformVc);
-        ComputeCR(md2.DeformVc, md2.D, md2.F, md2.QuadVertexIndices, md2.DeformECR, md2.DeformFCR);
-        
-        MatrixXd Centers(md2.F.rows(),3);
-        Centers.setZero();
-        for (int i=0;i<md2.F.rows();i++)
-            for (int j=0;j<md2.D(i);j++)
-                Centers.row(i)+=V.row(F(i,j))/(double)md2.D(i);
-        
-        
-        md2.EdgeDeformV<<md2.DeformV, Centers;
-        
-    } else {
-        
-        V=md3.DeformV;
-        Coords2Quat(V, md3.DeformVq);
-        ComputeCR(md3.DeformVq, md3.D, md3.F, md3.QuadVertexIndices, md3.DeformECR, md3.DeformFCR);
-        
-        MatrixXd Centers(md3.F.rows(),3);
-        Centers.setZero();
-        for (int i=0;i<md3.F.rows();i++)
-            for (int j=0;j<md3.D(i);j++)
-                Centers.row(i)+=V.row(F(i,j))/(double)md3.D(i);
-        
-        md3.EdgeDeformV<<md3.DeformV, Centers;
-        
-    }
-    
-    
-    
-    UpdateCurrentView();
-    
 }
-
-ProjectionModes GetProjectionCallback()
-{
-    return(ProjectionMode);
-    
-}
-
 
 bool init(igl::viewer::Viewer& viewer)
 {
@@ -1507,21 +914,7 @@ bool init(igl::viewer::Viewer& viewer)
     viewer.ngui->addVariable<bool>("Exact MC", isExactMC);
     viewer.ngui->addVariable<bool>("Exact IAP", isExactIAP);
     
-
-    /*vector<pair<ProjectionModes, string> > ProjectionAlgorithmList(9);
-    ProjectionAlgorithmList[0]=pair<ProjectionModes,string>(PROJECTION_AMAP, "AMAP");
-    ProjectionAlgorithmList[1]=pair<ProjectionModes,string>(PROJECTION_FF,"Form Finding");
-    ProjectionAlgorithmList[2]=pair<ProjectionModes,string>(PROJECTION_ST,"Spin Transformation");
-    ProjectionAlgorithmList[3]=pair<ProjectionModes,string>(PROJECTION_SU, "ShapeUp");
-    ProjectionAlgorithmList[4]=pair<ProjectionModes,string>(PROJECTION_LSCM, "LSCM");
-    ProjectionAlgorithmList[5]=pair<ProjectionModes,string>(PROJECTION_BD, "BD Interpolation");
-    ProjectionAlgorithmList[6]=pair<ProjectionModes,string>(PROJECTION_CETM, "CETM");
-    ProjectionAlgorithmList[7]=pair<ProjectionModes,string>(PROJECTION_ASAP, "As-similar-as-possible");
-    ProjectionAlgorithmList[8]=pair<ProjectionModes,string>(PROJECTION_BIHARMONIC, "Bounded Biharmonic Weights");
-    viewer.ngui->addVariable<ProjectionModes>("Projection", SetProjectionCallback, GetProjectionCallback);*/
-    
     viewer.screen->performLayout();
-    //viewer.ngui->layout();
 
     return false;
 }

@@ -14,7 +14,8 @@
 #include <Eigen/Sparse>
 #include "DeformTraits.h"
 #include "PrescribeEdgeJumps.h"
-#include "QuadConstSolverPardiso.h"
+#include "QuadConstSolver.h"
+#include <hedra/EigenSolverWrapper.h>
 
 using namespace Eigen;
 using namespace std;
@@ -80,12 +81,12 @@ public:
     
     //optimization operators
     DeformTraitsCornerVars3D DeformTraits;
-    QuadConstSolverPardiso<DeformTraitsCornerVars3D> DeformSolver;
+    QuadConstSolver<DeformTraitsCornerVars3D> DeformSolver;
     
     PrescribeEdgeJumps3D InterpTraits;
-    QuadConstSolverPardiso<PrescribeEdgeJumps3D> InterpSolver;
+    QuadConstSolver<PrescribeEdgeJumps3D> InterpSolver;
     
-    PardisoSolver d0Solver;
+    hedra::optimization::EigenSolverWrapper<Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > > d0Solver;
     
     Vector4i DeformGlobalVertices;    //four points defining the global transformation
     MatrixXd DeformGlobalMoebius;  //the global mobius (c,d)

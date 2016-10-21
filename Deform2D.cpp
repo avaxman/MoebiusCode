@@ -15,12 +15,11 @@
 #include <igl/slice.h>
 #include <igl/slice_into.h>
 #include <igl/speye.h>
-#include "QuadConstSolverPardiso.h"
+#include "QuadConstSolver.h"
 #include "DeformTraits.h"
-#include "AuxSparse.h"
 #include "PrescribeEdgeJumps.h"
 #include "ExtraFunctions.h"
-#include "CheckTraits.h"
+
 
 #define PRINT_OUT 0
 

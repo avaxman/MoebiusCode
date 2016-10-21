@@ -9,7 +9,6 @@
 #ifndef testigl_DeformTraits_h
 #define testigl_DeformTraits_h
 
-#include "AuxSparse.h"
 #include "QuaternionOps.h"
 
 typedef std::complex<double> Complex;
