@@ -7,7 +7,8 @@
 //
 
 #include "ExtraFunctions.h"
-#include "PardisoSolver.h"
+#include <hedra/EigenSolverWrapper.h>
+
 
 using namespace Eigen;
 using namespace std;
@@ -82,7 +83,7 @@ VectorXcd SolveComplexSytem(const SparseMatrix<Complex>& A, const VectorXcd& b)
     
     rb<<b.real(), b.imag();
     
-    VectorXd RawSolution=PardisoLinearSolve(rA, rb);
+    MatrixXd RawSolution=hedra::optimization::EigenSingleSolveWrapper<Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > >(rA, rb);
     
     int ComplexSize=A.cols();
     

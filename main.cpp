@@ -888,9 +888,6 @@ void SetSmallkCallback(double value)
 
 
 
-
-}
-
 bool init(igl::viewer::Viewer& viewer)
 {
     using namespace nanogui;

@@ -124,7 +124,7 @@ public:
         VectorXi MatRows, MatCols;
         VectorXd MatValues;
         VectorXd Rhs;
-        VectorXd Direction;
+        MatrixXd Direction;
         do{
             MultiplyAdjointMatrix(SolverTraits->GradRows, SolverTraits->GradCols,SolverTraits->GradValues, MatRows, MatCols, MatValues);
             MultiplyAdjointVector(SolverTraits->GradRows, SolverTraits->GradCols, SolverTraits->GradValues, -SolverTraits->TotalVec, Rhs);
