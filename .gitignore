@@ -184,3 +184,10 @@ build/libigl/nanogui/ext_build/glfw/src/glfw_config.h
 build/libigl/nanogui/libnanogui.a
 build/libigl/nanogui/nanogui_resources.cpp
 build/libigl/nanogui/nanogui_resources.h
+build/CMakeFiles/MoebiusDeform_bin.dir/Deform3D.cpp.o
+build/CMakeFiles/MoebiusDeform_bin.dir/ExtraFunctions.cpp.o
+build/CMakeFiles/MoebiusDeform_bin.dir/QuaternionOps.cpp.o
+build/CMakeFiles/MoebiusDeform_bin.dir/main.cpp.o
+build/MoebiusDeform_bin
+build/libigl/nanogui/ext_build/glfw/src/CMakeFiles/glfw.dir/depend.internal
+build/libigl/nanogui/ext_build/glfw/src/libglfw3.a
