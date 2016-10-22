@@ -86,7 +86,7 @@ public:
     PrescribeEdgeJumps3D InterpTraits;
     QuadConstSolver<PrescribeEdgeJumps3D> InterpSolver;
     
-    hedra::optimization::EigenSolverWrapper<Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > > d0Solver;
+    hedra::optimization::EigenSolverWrapper<Eigen::SparseQR<Eigen::SparseMatrix<double, Eigen::ColMajor>, Eigen::COLAMDOrdering<int> > > d0Solver;
     
     Vector4i DeformGlobalVertices;    //four points defining the global transformation
     MatrixXd DeformGlobalMoebius;  //the global mobius (c,d)

@@ -707,7 +707,7 @@ void MoebiusDeformation3D::Interpolate(double t, int NumIterations)
     igl::slice(CompMat, LocalVarIndices, 2, CompMatVar);
     
     
-    VectorXd InitialMobCoeffs=hedra::optimization::EigenSingleSolveWrapper<Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > >(CompMatVar.adjoint()*CompMatVar,CompMatVar.adjoint()*Rhs);
+    VectorXd InitialMobCoeffs=hedra::optimization::EigenSingleSolveWrapper<Eigen::SparseQR<Eigen::SparseMatrix<double, Eigen::ColMajor>, Eigen::COLAMDOrdering<int> > >(CompMatVar.adjoint()*CompMatVar,CompMatVar.adjoint()*Rhs);
     
     cout<<"Initial solution g^t->(c,d) Error: "<<(CompMatVar*InitialMobCoeffs-Rhs).lpNorm<Infinity>()<<endl;
     

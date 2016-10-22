@@ -19,7 +19,7 @@ template<class QuadConstSolverTraits>
 class QuadConstSolver{
 private:
     QuadConstSolverTraits* SolverTraits;
-    hedra::optimization::EigenSolverWrapper<Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > > LinearSolver;
+    hedra::optimization::EigenSolverWrapper<Eigen::SparseQR<Eigen::SparseMatrix<double, Eigen::ColMajor>, Eigen::COLAMDOrdering<int> > > LinearSolver;
 public:
     
     Eigen::VectorXd ConvErrors;
@@ -88,7 +88,6 @@ public:
     void Initialize(QuadConstSolverTraits* st){
         SolverTraits=st;
         
-        
         //analysing pattern
         Eigen::VectorXi I,J;
         Eigen::VectorXd S;
@@ -136,8 +135,26 @@ public:
                 return CurrSolution;
             }
     
-            LinearSolver.solve(Rhs,Direction);
+            if (!LinearSolver.solve(Rhs,Direction)){
+                cout<<"Solving has failed!"<<endl;
+                return CurrSolution;
+            }
             
+            
+            //testing lienar solver
+            Eigen::SparseMatrix<double> JtJ(Direction.size(), Direction.size());
+            std::vector<Triplet<double> > Tris;
+            for (int i=0;i<MatRows.size();i++){
+                Tris.push_back(Triplet<double>(MatRows(i), MatCols(i), MatValues(i)));
+            }
+            JtJ.setFromTriplets(Tris.begin(), Tris.end());
+            
+            cout<<"J^T*J*Direction-Rhs: "<<(JtJ*Direction-Rhs).template lpNorm<Infinity>()<<endl;
+            cout<<"J^T*J size and rank:"<<Direction.size()<<","<<LinearSolver.solver.rank()<<endl;
+            cout<<"Rhs: "<<(Rhs).lpNorm<Infinity>()<<endl;
+            cout<<"MatValues: "<<(MatValues).lpNorm<Infinity>()<<endl;
+
+  
             //doing a line search
             double h=Inith;
             double PrevTotalError=(SolverTraits->TotalVec).template lpNorm<Infinity>();
