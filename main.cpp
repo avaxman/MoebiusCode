@@ -17,6 +17,7 @@
 #include <hedra/polygonal_edge_topology.h>
 #include <igl/per_vertex_normals.h>
 #include <algorithm>
+#include <hedra/scalar2RGB.h>
 
 using namespace Eigen;
 using namespace std;
@@ -86,28 +87,6 @@ double InterpScalar=0.0;
 
 MoebiusDeformation2D md2;
 MoebiusDeformation3D md3;
-
-
-MatrixXd Scalar2RGB(const VectorXd ScalarValues)
-{
-    MatrixXd Result(ScalarValues.size(),3);
-    for (int i=0;i<ScalarValues.size();i++){
-        double CurrValue=ScalarValues(i);
-        if (CurrValue<0.0) CurrValue=0.0;
-        if (CurrValue>1.0) CurrValue=1.0;
-        
-        int Entry=floor(CurrValue*(ColorMap.rows()-1));
-        if (Entry==ColorMap.rows()-1)
-            Result.row(i)<<ColorMap.row(ColorMap.rows()-1);
-        else{
-            double Residue=CurrValue*(double)(ColorMap.rows()-1)-(double)(Entry);
-            Result.row(i)=ColorMap.row(Entry)*(1-Residue)+ColorMap.row(Entry+1)*Residue;
-            
-        }
-        
-    }
-    return Result;
-}
 
 
 void UpdateCurrentView()
@@ -204,8 +183,8 @@ void UpdateCurrentView()
             FaceValues<<AbsQuotient,AbsQuotient;
         if (ViewingMode==IA_ERROR)
             FaceValues<<AngleDiff,AngleDiff;
-        
-        FaceColors=Scalar2RGB(FaceValues);
+    
+        hedra::scalar2RGB(FaceValues, 0.0,1.0, FaceColors);
         
         MobiusViewer.data.set_mesh(V.cast<double>(),tF);
         MobiusViewer.data.set_colors(FaceColors.cast<double>());
@@ -274,9 +253,6 @@ void UpdateCurrentView()
             else  //FACE_MC
                 for (int i=0;i<(IS_COMPLEX ? md2.tF.rows() : md3.tF.rows());i++)
                     FaceValues(i)=AbsCR((IS_COMPLEX ? md2.FromFace(i) : md3.FromFace(i)));
-            
-            FaceColors=Scalar2RGB(FaceValues);
-            
         }
         
         if ((ViewingMode==QC_ERROR)||(ViewingMode==SMALLK_ERROR)){
@@ -351,9 +327,9 @@ void UpdateCurrentView()
                         FaceValues(i)=((Bigk-1.0)/(Bigk+1.0))/SmallkSensitivity;
                     
                 }
-                
-                
             }
+            hedra::scalar2RGB(FaceValues,0.0,1.0, FaceColors);
+            MobiusViewer.data.set_colors(FaceColors.cast<double>());
         }
         
         if (ViewingMode==AREA_ERROR){
@@ -386,15 +362,17 @@ void UpdateCurrentView()
                 }
                 
             }
+            hedra::scalar2RGB(FaceValues,0.0,1.0, FaceColors);
+            MobiusViewer.data.set_colors(FaceColors.cast<double>());
         }
         
         
         if (ViewingMode==SMALLK_ERROR)
             cout<<"Small k errors between ["<<FaceValues.minCoeff()*SmallkSensitivity<<","<<FaceValues.maxCoeff()*SmallkSensitivity<<"]"<<endl;
         
-        FaceColors=Scalar2RGB(FaceValues);
-        
+        MobiusViewer.core.show_lines=false;
         MobiusViewer.data.set_mesh(V.cast<double>(),tF);
+        hedra::scalar2RGB(FaceValues, 0.0,1.0, FaceColors);
         MobiusViewer.data.set_colors(FaceColors.cast<double>());
     }
     
@@ -420,30 +398,14 @@ void UpdateCurrentView()
     }
     
     
-    //drawing only original edges
-    vector<pair<int,int> > OrigEdges;
-    for (int i=0;i<(IS_COMPLEX ? md2.F.rows() : md3.F.rows());i++){
-        int PolygonSize=(IS_COMPLEX ? md2.D(i) : md3.D(i));
-        for (int j=0;j<(IS_COMPLEX ? md2.D(i) : md3.D(i));j++){
-            int CurrVertex=(IS_COMPLEX ? md2.F(i,j) : md3.F(i,j));
-            int NextVertex=(IS_COMPLEX ? md2.F(i,(j+1)%PolygonSize) : md3.F(i,(j+1)%PolygonSize));
-            OrigEdges.push_back(pair<int,int> (CurrVertex, NextVertex));
-        }
-    }
-    
-    MatrixXd OrigEdges1(OrigEdges.size(),3);
-    MatrixXd OrigEdges2(OrigEdges.size(),3);
-    for (int i=0;i<OrigEdges.size();i++){
-        OrigEdges1.row(i)=V.row(OrigEdges[i].first);
-        OrigEdges2.row(i)=V.row(OrigEdges[i].second);
-    }
-    
-    MatrixXd OrigEdgeColors(OrigEdges1.rows(),3);
-    OrigEdgeColors.col(0)=VectorXd::Constant(OrigEdges1.rows(),0.25);
-    OrigEdgeColors.col(1)=VectorXd::Constant(OrigEdges1.rows(),0.25);
-    OrigEdgeColors.col(2)=VectorXd::Constant(OrigEdges1.rows(),0.0);
-    
-    //MobiusViewer.data.add_edges(OrigEdges1.cast<double>(),OrigEdges2.cast<double>(),OrigEdgeColors.cast<double>());
+    MatrixXi E2V=(IS_COMPLEX ? md2.E2V : md3.E2V);
+    Eigen::MatrixXd OrigEdgeColors(E2V.rows(),3);
+    OrigEdgeColors.col(0)=Eigen::VectorXd::Constant(E2V.rows(),0.0);
+    OrigEdgeColors.col(1)=Eigen::VectorXd::Constant(E2V.rows(),0.0);
+    OrigEdgeColors.col(2)=Eigen::VectorXd::Constant(E2V.rows(),0.0);
+    MobiusViewer.data.set_edges(V,E2V,OrigEdgeColors);
+
+
 }
 
 void SaveGeneralOff(const std::string str, const MatrixXd& V, const MatrixXi& D, const MatrixXi& F)
@@ -655,7 +617,7 @@ bool mouse_move(igl::viewer::Viewer& viewer, int mouse_x, int mouse_y)
         for (int i=0;i<ConstPoses.size();i++)
             ConstPosesMat.row(i)=ConstPoses[i];
         
-        (IS_COMPLEX ? md2.UpdateDeformation(ConstPosesMat,200, isExactMC, isExactIAP) : md3.UpdateDeformation(ConstPosesMat,200));
+        (IS_COMPLEX ? md2.UpdateDeformation(ConstPosesMat,100, isExactMC, isExactIAP) : md3.UpdateDeformation(ConstPosesMat,100));
         RecomputeInterpolation=true;
     }
     
@@ -904,7 +866,7 @@ bool init(igl::viewer::Viewer& viewer)
     viewer.ngui->addVariable<double>("MC Sensitivity",SetMCSenseCallback, GetMCSenseCallback);
     viewer.ngui->addVariable<double>("IAP Sensitivity", SetIAPSenseCallback, GetIAPSenseCallback);
     viewer.ngui->addVariable<double>("QC Sensitivity", SetQCSenseCallback, GetQCSenseCallback);
-    viewer.ngui->addVariable<double>("Circularity Sensitivity", SetCircSenseCallback, GetCircSenseCallback);
+    viewer.ngui->addVariable<double>("Concyclity Sensitivity", SetCircSenseCallback, GetCircSenseCallback);
     viewer.ngui->addVariable<double>("Area Sensitivity", SetAreaSenseCallback, GetAreaSenseCallback);
     viewer.ngui->addVariable<double>("Small k Sensitivity", SetSmallkCallback, GetSmallkCallback);
     
@@ -966,7 +928,7 @@ int main(int argc, char *argv[])
     std::string buffstr(buffer);
     if(strstr(buffer, ".obj") == NULL) { //an off file
         ReadGeneralOff(buffer, V, D, F);
-        //F.array()-=1;
+        F.array()-=F.minCoeff();  //in case of 1-indexed files
         MobiusViewer.data.set_uv(UV);
     }else
         ReadGeneralObj(buffer, V, F);

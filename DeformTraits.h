@@ -93,7 +93,7 @@ public:
         
         CurrSolution.resize(SolutionSize);
         
-        CloseFactor=10e-5;
+        CloseFactor=10e-3;
         
         if (isExactMC || isExactIAP)
             ConstTolerance=10e-9;
@@ -877,11 +877,12 @@ public:
         double rate=ConstVec.lpNorm<Infinity>()/PrevError;
         double ReduceRate=min(rate/2.0,1.0);
         
-        InitSolution=CurrSolution;
         if (ConstIndices.size()==OrigVq.rows())
             SmoothFactor*=0.9-0.2*(1.0-ReduceRate);
         else
             SmoothFactor*=0.9-0.7*(1.0-ReduceRate);
+        
+        InitSolution=CurrSolution;
         
         
     }

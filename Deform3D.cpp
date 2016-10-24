@@ -45,46 +45,6 @@ void Quat2Vector(const MatrixXd& QVec, VectorXd& RawVec)
     
 }
 
-
-
-void ConstructEFi(const MatrixXi& D, const MatrixXi& F2E, const MatrixXi& E2F, MatrixXi& E2Fi, MatrixXd& F2ESigns, VectorXi& InnerEdges)
-{
-    //cout<<"F: "<<F<<endl;
-    //cout<<"F2E: "<<F2E<<endl;
-    //cout<<"E2F: "<<E2F<<endl;
-    std::vector<int> InnerEdgesVec;
-    E2Fi=MatrixXi::Constant(E2F.rows(), 2,-1);
-    F2ESigns=MatrixXd::Zero(F2E.rows(),F2E.cols());
-    for (int i=0;i<E2F.rows();i++)
-        for (int k=0;k<2;k++){
-            if (E2F(i,k)==-1)
-                continue;
-            
-            for (int j=0;j<D(E2F(i,k));j++)
-                if (F2E(E2F(i,k),j)==i)
-                    E2Fi(i,k)=j;
-        }
-    
-    //cout<<"E2Fi: "<<E2Fi<<endl;
-    
-    //doing edge signs
-    for (int i=0;i<E2F.rows();i++){
-        if (E2Fi(i,0)!=-1) F2ESigns(E2F(i,0),E2Fi(i,0))=1.0;
-        if (E2Fi(i,1)!=-1) F2ESigns(E2F(i,1),E2Fi(i,1))=-1.0;
-        if ((E2F(i,0)!=-1)&&(E2F(i,1)!=-1))
-            InnerEdgesVec.push_back(i);
-    }
-    
-    //cout<<"F2ESigns :"<<F2ESigns<<endl;
-    
-    InnerEdges.resize(InnerEdgesVec.size());
-    for (int i=0;i<InnerEdgesVec.size();i++)
-        InnerEdges(i)=InnerEdgesVec[i];
-    
-    //cout<<"InnerEdges: "<<InnerEdges<<endl;
-}
-
-
 //this computes the cross ratio on every edge, and on every face of the mesh
 void ComputeCR(const MatrixXd& Vq, const MatrixXi& D, const MatrixXi& F, const MatrixXi& QuadVertexIndices, MatrixXd& ECR, MatrixXd& FCR)
 {

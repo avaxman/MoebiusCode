@@ -167,6 +167,7 @@ public:
             CurrIter++;
             SolverTraits->Reformulate(CurrIter, MaxIterations, CurrSolution, ConstError);
             ConvErrorsList.push_back(ConstError);
+            SolverTraits->UpdateEnergy(CurrSolution);
             SolverTraits->UpdateGradient(CurrSolution);
         }while ((CurrIter<MaxIterations)&&(!isTerminate));
         
