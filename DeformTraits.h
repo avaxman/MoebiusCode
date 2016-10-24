@@ -876,10 +876,6 @@ public:
         //when error is halved, the smoothness is reduced by slowest, and when error change is zero, smoothness is halved.
         double rate=ConstVec.lpNorm<Infinity>()/PrevError;
         double ReduceRate=min(rate/2.0,1.0);
-        if (ConstIndices.size()==OrigVq.rows())
-            PosFactor*=0.95-0.05*(1.0-ReduceRate);
-        else
-            PosFactor=0.95-0.45*(1.0-ReduceRate);
         
         InitSolution=CurrSolution;
         if (ConstIndices.size()==OrigVq.rows())
