@@ -19,7 +19,7 @@ template<class QuadConstSolverTraits>
 class QuadConstSolver{
 private:
     QuadConstSolverTraits* SolverTraits;
-    hedra::optimization::EigenSolverWrapper<Eigen::SparseQR<Eigen::SparseMatrix<double, Eigen::ColMajor>, Eigen::COLAMDOrdering<int> > > LinearSolver;
+    hedra::optimization::EigenSolverWrapper<Eigen::SimplicialLLT<Eigen::SparseMatrix<double> > > LinearSolver;
 public:
     
     Eigen::VectorXd ConvErrors;
@@ -94,7 +94,7 @@ public:
         
         MultiplyAdjointMatrix(st->GradRows, st->GradCols,Eigen::VectorXd::Ones(st->GradRows.size()),I,J,S);
     
-        LinearSolver.analyze(I,J);
+        LinearSolver.analyze(I,J, true);
     }
     
     Eigen::VectorXd Solve(const Eigen::VectorXd& InitSolution,
@@ -129,7 +129,7 @@ public:
             MultiplyAdjointVector(SolverTraits->GradRows, SolverTraits->GradCols, SolverTraits->GradValues, -SolverTraits->TotalVec, Rhs);
             
             //solving to get the direction
-            if(!LinearSolver.factorize(MatValues)) {
+            if(!LinearSolver.factorize(MatValues, true)) {
                 // decomposition failed
                 cout<<"Solver Failed to factorize! "<<endl;
                 return CurrSolution;
@@ -140,21 +140,6 @@ public:
                 return CurrSolution;
             }
             
-            
-            //testing lienar solver
-            Eigen::SparseMatrix<double> JtJ(Direction.size(), Direction.size());
-            std::vector<Triplet<double> > Tris;
-            for (int i=0;i<MatRows.size();i++){
-                Tris.push_back(Triplet<double>(MatRows(i), MatCols(i), MatValues(i)));
-            }
-            JtJ.setFromTriplets(Tris.begin(), Tris.end());
-            
-            cout<<"J^T*J*Direction-Rhs: "<<(JtJ*Direction-Rhs).template lpNorm<Infinity>()<<endl;
-            cout<<"J^T*J size and rank:"<<Direction.size()<<","<<LinearSolver.solver.rank()<<endl;
-            cout<<"Rhs: "<<(Rhs).lpNorm<Infinity>()<<endl;
-            cout<<"MatValues: "<<(MatValues).lpNorm<Infinity>()<<endl;
-
-  
             //doing a line search
             double h=Inith;
             double PrevTotalError=(SolverTraits->TotalVec).template lpNorm<Infinity>();

@@ -288,8 +288,8 @@ void MoebiusDeformation3D::SetupMesh(const MatrixXd& InV, const MatrixXi& InD, c
     //cout<<"I:"<<I<<endl;
     //cout<<"J:"<<J<<endl;
     
-    d0Solver.analyze(I,J);
-    if(!d0Solver.factorize(S))
+    d0Solver.analyze(I,J, false);
+    if(!d0Solver.factorize(S, false))
         // decomposition failed
         cout<<"Solver Failed to factorize! "<<endl;
 
