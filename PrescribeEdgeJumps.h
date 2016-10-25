@@ -9,19 +9,24 @@
 #ifndef testigl_PrescribeEdgeJumps_h
 #define testigl_PrescribeEdgeJumps_h
 
+#include <Eigen/core>
+#include <hedra/QuaternionOps.h>
+#include <hedra/quaternionic_derivatives.h>
+
 
 class PrescribeEdgeJumps2D{
 public:
     
-    MatrixXi D, F;
-    VectorXi InnerEdges;
+    typedef std::complex<double> Complex;
+    Eigen::MatrixXi D, F;
+    Eigen::VectorXi InnerEdges;
     
-    VectorXcd OrigVc;
-    MatrixXi FaceCornerIndices;  //rows of f1, f2, zi, zj (oriented)
-    VectorXcd PresJumps;
-    Vector2cd Firstcd;
-    VectorXcd InitSolution;
-    VectorXcd CurrSolution;
+    Eigen::VectorXcd OrigVc;
+    Eigen::MatrixXi FaceCornerIndices;  //rows of f1, f2, zi, zj (oriented)
+    Eigen::VectorXcd PresJumps;
+    Eigen::Vector2cd Firstcd;
+    Eigen::VectorXcd InitSolution;
+    Eigen::VectorXcd CurrSolution;
     bool isExactMC, isExactIAP;
     
     double SmoothFactor;
@@ -30,20 +35,20 @@ public:
     int SolutionSize;
     
     
-    VectorXcd PresVec;
-    VectorXcd CompVec;
-    VectorXcd CloseVec;
-    Vector2cd FirstcdVec;
-    VectorXd TotalVec;
-    VectorXcd ConstVec;
-    VectorXd MCVec;
-    VectorXd IAPVec;
+    Eigen::VectorXcd PresVec;
+    Eigen::VectorXcd CompVec;
+    Eigen::VectorXcd CloseVec;
+    Eigen::Vector2cd FirstcdVec;
+    Eigen::VectorXd TotalVec;
+    Eigen::VectorXcd ConstVec;
+    Eigen::VectorXd MCVec;
+    Eigen::VectorXd IAPVec;
     
-    VectorXi GradRows;
-    VectorXi GradCols;
-    VectorXd GradValues;
-    VectorXi ComplexGradRows, ComplexGradCols;
-    VectorXcd ComplexGradValues;
+    Eigen::VectorXi GradRows;
+    Eigen::VectorXi GradCols;
+    Eigen::VectorXd GradValues;
+    Eigen::VectorXi ComplexGradRows, ComplexGradCols;
+    Eigen::VectorXcd ComplexGradValues;
     
     int PresTriOffset, PresRowOffset;
     int CloseTriOffset, CloseRowOffset;
@@ -53,7 +58,10 @@ public:
     int ComplexTriOffset, ComplexRowOffset;
     
     
-    void Initialize(const VectorXcd& inOrigVc, const MatrixXi& inD, const MatrixXi& inF, MatrixXi& inFaceCornerIndices, const bool& inisExactMC, const bool& inisExactIAP){
+    void Initialize(const Eigen::VectorXcd& inOrigVc, const Eigen::MatrixXi& inD, const Eigen::MatrixXi& inF, Eigen::MatrixXi& inFaceCornerIndices, const bool& inisExactMC, const bool& inisExactIAP){
+        
+        using namespace Eigen;
+        using namespace std;
         
         F=inF; D=inD;
         FaceCornerIndices=inFaceCornerIndices;
@@ -263,7 +271,10 @@ public:
     
     
     
-    void UpdateEnergy(const VectorXd& CurrSolutionReal){
+    void UpdateEnergy(const Eigen::VectorXd& CurrSolutionReal){
+        
+        using namespace Eigen;
+        using namespace std;
         
         CurrSolution.array().real()<<CurrSolutionReal.head(CurrSolutionReal.size()/2);
         CurrSolution.array().imag()<<CurrSolutionReal.tail(CurrSolutionReal.size()/2);
@@ -296,7 +307,10 @@ public:
         
     }
     
-    void UpdateGradient(const VectorXd& CurrSolutionReal){
+    void UpdateGradient(const Eigen::VectorXd& CurrSolutionReal){
+        
+        using namespace Eigen;
+        using namespace std;
         
         CurrSolution.array().real()<<CurrSolutionReal.head(CurrSolutionReal.size()/2);
         CurrSolution.array().imag()<<CurrSolutionReal.tail(CurrSolutionReal.size()/2);
@@ -399,8 +413,10 @@ public:
     
     
     //only to be called after UpdateConstraints is updated!!
-    void Reformulate(int CurrIter, int MaxIterations, const VectorXd& CurrSolutionReal, double PrevError)
+    void Reformulate(int CurrIter, int MaxIterations, const Eigen::VectorXd& CurrSolutionReal, double PrevError)
     {
+        using namespace Eigen;
+        using namespace std;
         VectorXcd CurrSolution(CurrSolutionReal.size()/2);
         CurrSolution.array().real()=CurrSolutionReal.head(CurrSolutionReal.size()/2);
         CurrSolution.array().imag()=CurrSolutionReal.tail(CurrSolutionReal.size()/2);
@@ -413,8 +429,10 @@ public:
         
     }
     
-    void UpdateConstraints(const VectorXd& CurrSolutionReal)
+    void UpdateConstraints(const Eigen::VectorXd& CurrSolutionReal)
     {
+        using namespace Eigen;
+        using namespace std;
         VectorXcd CurrSolution(CurrSolutionReal.size()/2);
         CurrSolution.array().real()=CurrSolutionReal.head(CurrSolutionReal.size()/2);
         CurrSolution.array().imag()=CurrSolutionReal.tail(CurrSolutionReal.size()/2);
@@ -439,7 +457,7 @@ public:
     
     //only to be called after UpdateConstraints is updated!!
     bool isTerminate(){
-        return (ConstVec.lpNorm<Infinity>()<ConstTolerance);
+        return (ConstVec.lpNorm<Eigen::Infinity>()<ConstTolerance);
     }
 };
 
@@ -449,33 +467,33 @@ public:
 class PrescribeEdgeJumps3D{
 public:
     
-    MatrixXi D, F;
+    Eigen::MatrixXi D, F;
     
-    MatrixXd OrigVq;
-    MatrixXi FaceCornerIndices;  //rows of f1, f2, zi, zj (oriented)
-    VectorXd PresJumps;
-    VectorXd InitSolution;
-    VectorXd Firstcd;
+    Eigen::MatrixXd OrigVq;
+    Eigen::MatrixXi FaceCornerIndices;  //rows of f1, f2, zi, zj (oriented)
+    Eigen::VectorXd PresJumps;
+    Eigen::VectorXd InitSolution;
+    Eigen::VectorXd Firstcd;
     
     double PresFactor;
     double CloseFactor;
     double ConstTolerance;
     double SolutionSize;
 
-    RowVector4d UnitQuat;
+    Eigen::RowVector4d UnitQuat;
     
     bool isExactMC;
     
     //intermediate variables
-    VectorXd PresVec;
-    VectorXd CloseVec;
-    VectorXd CompVec;
-    VectorXd ImagVec;
-    VectorXd FirstcdVec;
-    VectorXd MCVec;
+    Eigen::VectorXd PresVec;
+    Eigen::VectorXd CloseVec;
+    Eigen::VectorXd CompVec;
+    Eigen::VectorXd ImagVec;
+    Eigen::VectorXd FirstcdVec;
+    Eigen::VectorXd MCVec;
     
-    VectorXd TotalVec;
-    VectorXd ConstVec;
+    Eigen::VectorXd TotalVec;
+    Eigen::VectorXd ConstVec;
     
     int PresTriOffset, PresRowOffset;
     int CloseTriOffset, CloseRowOffset;
@@ -484,11 +502,17 @@ public:
     int FirstcdTriOffset, FirstcdRowOffset;
     int MCTriOffset, MCRowOffset;
     
-    VectorXi GradRows, GradCols;
-    VectorXd GradValues;
+    Eigen::VectorXi GradRows, GradCols;
+    Eigen::VectorXd GradValues;
     
-    void Initialize(const MatrixXd& inOrigVq,  const MatrixXi& inD, const MatrixXi& inF,MatrixXi& inFaceCornerIndices, const bool& inisExactMC){
+    void Initialize(const Eigen::MatrixXd& inOrigVq,
+                    const Eigen::MatrixXi& inD,
+                    const Eigen::MatrixXi& inF,
+                    Eigen::MatrixXi& inFaceCornerIndices,
+                    const bool& inisExactMC){
         
+        using namespace Eigen;
+        using namespace std;
         F=inF; D=inD;
         FaceCornerIndices=inFaceCornerIndices;
         OrigVq=inOrigVq;
@@ -544,17 +568,17 @@ public:
             int CurrRowOffset=PresRowOffset+4*2*i;
             
           
-            GetQuatDerivativeIndices(GradRows, GradCols, PresTriCounter, c1TriPoses, CurrRowOffset, Colc1);
-            GetQuatDerivativeIndices(GradRows, GradCols, PresTriCounter, d1TriPoses, CurrRowOffset, Cold1);
-            GetQuatDerivativeIndices(GradRows, GradCols, PresTriCounter, c2TriPoses, CurrRowOffset, Colc2);
-            GetQuatDerivativeIndices(GradRows, GradCols, PresTriCounter, d2TriPoses, CurrRowOffset, Cold2);
+            hedra::quatDerivativeIndices(GradRows, GradCols, PresTriCounter, c1TriPoses, CurrRowOffset, Colc1);
+            hedra::quatDerivativeIndices(GradRows, GradCols, PresTriCounter, d1TriPoses, CurrRowOffset, Cold1);
+            hedra::quatDerivativeIndices(GradRows, GradCols, PresTriCounter, c2TriPoses, CurrRowOffset, Colc2);
+            hedra::quatDerivativeIndices(GradRows, GradCols, PresTriCounter, d2TriPoses, CurrRowOffset, Cold2);
             
             CurrRowOffset=PresRowOffset+4*(2*i+1);
             
-            GetQuatDerivativeIndices(GradRows, GradCols, PresTriCounter+64, c1TriPoses, CurrRowOffset, Colc1);
-            GetQuatDerivativeIndices(GradRows, GradCols, PresTriCounter+64, d1TriPoses, CurrRowOffset, Cold1);
-            GetQuatDerivativeIndices(GradRows, GradCols, PresTriCounter+64, c2TriPoses, CurrRowOffset, Colc2);
-            GetQuatDerivativeIndices(GradRows, GradCols, PresTriCounter+64, d2TriPoses, CurrRowOffset, Cold2);
+            hedra::quatDerivativeIndices(GradRows, GradCols, PresTriCounter+64, c1TriPoses, CurrRowOffset, Colc1);
+            hedra::quatDerivativeIndices(GradRows, GradCols, PresTriCounter+64, d1TriPoses, CurrRowOffset, Cold1);
+            hedra::quatDerivativeIndices(GradRows, GradCols, PresTriCounter+64, c2TriPoses, CurrRowOffset, Colc2);
+            hedra::quatDerivativeIndices(GradRows, GradCols, PresTriCounter+64, d2TriPoses, CurrRowOffset, Cold2);
             
             PresTriCounter+=128;
         }
@@ -581,10 +605,10 @@ public:
             int Cold2=4*(2*FaceCornerIndices(i,1)+1);
             int CurrRowOffset=CompRowOffset+4*i;
             
-            GetQuatDerivativeIndices(GradRows, GradCols, CompTriCounter, c1TriPoses, CurrRowOffset, Colc1);
-            GetQuatDerivativeIndices(GradRows, GradCols, CompTriCounter, d1TriPoses, CurrRowOffset, Cold1);
-            GetQuatDerivativeIndices(GradRows, GradCols, CompTriCounter, c2TriPoses, CurrRowOffset, Colc2);
-            GetQuatDerivativeIndices(GradRows, GradCols, CompTriCounter, d2TriPoses, CurrRowOffset, Cold2);
+            hedra::quatDerivativeIndices(GradRows, GradCols, CompTriCounter, c1TriPoses, CurrRowOffset, Colc1);
+            hedra::quatDerivativeIndices(GradRows, GradCols, CompTriCounter, d1TriPoses, CurrRowOffset, Cold1);
+            hedra::quatDerivativeIndices(GradRows, GradCols, CompTriCounter, c2TriPoses, CurrRowOffset, Colc2);
+            hedra::quatDerivativeIndices(GradRows, GradCols, CompTriCounter, d2TriPoses, CurrRowOffset, Cold2);
             
             CompTriCounter+=64;
         }
@@ -632,8 +656,10 @@ public:
     
     
     
-    void UpdateEnergy(const VectorXd& CurrSolution)
+    void UpdateEnergy(const Eigen::VectorXd& CurrSolution)
     {
+        using namespace Eigen;
+        using namespace std;
         
         for (int i=0;i<FaceCornerIndices.rows();i++){
             RowVector4d c1=CurrSolution.segment(4*2*FaceCornerIndices(i,0),4).transpose();
@@ -644,14 +670,14 @@ public:
             RowVector4d zj=OrigVq.row(FaceCornerIndices(i,3));
             RowVector4d zij=zj-zi;
             
-            RowVector4d G1i=QMult1(c1,zi)+d1;
-            RowVector4d G2i=QMult1(c2,zi)+d2;
-            RowVector4d G1j=QMult1(c1,zj)+d1;
-            RowVector4d G2j=QMult1(c2,zj)+d2;
+            RowVector4d G1i=QMult(c1,zi)+d1;
+            RowVector4d G2i=QMult(c2,zi)+d2;
+            RowVector4d G1j=QMult(c1,zj)+d1;
+            RowVector4d G2j=QMult(c2,zj)+d2;
             
             RowVector4d g=PresJumps.segment(4*i,4);
-            PresVec.segment(4*(2*i),4)=PresFactor*((QMult1(G2i,g)-G1i).transpose());
-            PresVec.segment(4*(2*i+1),4)=PresFactor*((QMult1(QMult1(G1j, zij), QMult1(QConj1(g), QInv1(zij)))-G2j).transpose());
+            PresVec.segment(4*(2*i),4)=PresFactor*((QMult(G2i,g)-G1i).transpose());
+            PresVec.segment(4*(2*i+1),4)=PresFactor*((QMult(QMult(G1j, zij), QMult(QConj(g), QInv(zij)))-G2j).transpose());
             
         }
         
@@ -665,8 +691,10 @@ public:
     }
     
     
-    void UpdateGradient(const VectorXd& CurrSolution){
+    void UpdateGradient(const Eigen::VectorXd& CurrSolution){
         
+        using namespace Eigen;
+        using namespace std;
         PresTriOffset=0;
         PresRowOffset=0;
         Vector4i c1TriPoses; c1TriPoses<<0,16,32,48;
@@ -682,23 +710,23 @@ public:
             RowVector4d zi=OrigVq.row(FaceCornerIndices(i,2));
             RowVector4d zj=OrigVq.row(FaceCornerIndices(i,3));
             RowVector4d zij=zj-zi;
-            RowVector4d izij=QInv1(zij);
+            RowVector4d izij=QInv(zij);
             RowVector4d g=PresJumps.segment(4*i,4);
             
             
             //derivative of G2i*g-G1i=(c2*zi+d2)*g-c1*zi-d1
             
-            GetQuatDerivativeValues(GradValues, PresTriCounter, c1TriPoses, PresFactor*UnitQuat, -zi, false, false);
-            GetQuatDerivativeValues(GradValues, PresTriCounter, d1TriPoses, PresFactor*UnitQuat, -UnitQuat, false, false);
-            GetQuatDerivativeValues(GradValues, PresTriCounter, c2TriPoses, PresFactor*UnitQuat, QMult1(zi,g), false, false);
-            GetQuatDerivativeValues(GradValues, PresTriCounter, d2TriPoses, PresFactor*UnitQuat, g, false, false);
+            hedra::quatDerivativeValues(GradValues, PresTriCounter, c1TriPoses, PresFactor*UnitQuat, -zi, false, false);
+            hedra::quatDerivativeValues(GradValues, PresTriCounter, d1TriPoses, PresFactor*UnitQuat, -UnitQuat, false, false);
+            hedra::quatDerivativeValues(GradValues, PresTriCounter, c2TriPoses, PresFactor*UnitQuat, QMult(zi,g), false, false);
+            hedra::quatDerivativeValues(GradValues, PresTriCounter, d2TriPoses, PresFactor*UnitQuat, g, false, false);
             
            //derivatives of G1j*e*conj(g)*inv(e)-G2j=(c1*zj+d1)*zij*conj(g)*inv(zij)-c2*zj-d2
     
-            GetQuatDerivativeValues(GradValues, PresTriCounter+64, c1TriPoses, PresFactor*UnitQuat, QMult1(QMult1(zj, zij), QMult1(QConj1(g), izij)), false, false);
-            GetQuatDerivativeValues(GradValues, PresTriCounter+64, d1TriPoses, PresFactor*UnitQuat, QMult1(zij, QMult1(QConj1(g), izij)), false, false);
-            GetQuatDerivativeValues(GradValues, PresTriCounter+64, c2TriPoses, PresFactor*UnitQuat, -zj, false, false);
-            GetQuatDerivativeValues(GradValues, PresTriCounter+64, d2TriPoses, PresFactor*UnitQuat, -UnitQuat, false, false);
+            hedra::quatDerivativeValues(GradValues, PresTriCounter+64, c1TriPoses, PresFactor*UnitQuat, QMult(QMult(zj, zij), QMult(QConj(g), izij)), false, false);
+            hedra::quatDerivativeValues(GradValues, PresTriCounter+64, d1TriPoses, PresFactor*UnitQuat, QMult(zij, QMult(QConj(g), izij)), false, false);
+            hedra::quatDerivativeValues(GradValues, PresTriCounter+64, c2TriPoses, PresFactor*UnitQuat, -zj, false, false);
+            hedra::quatDerivativeValues(GradValues, PresTriCounter+64, d2TriPoses, PresFactor*UnitQuat, -UnitQuat, false, false);
             
             PresTriCounter+=128;
         }
@@ -716,13 +744,13 @@ public:
             RowVector4d zi=OrigVq.row(FaceCornerIndices(i,2));
             RowVector4d zj=OrigVq.row(FaceCornerIndices(i,3));
             RowVector4d zij=zj-zi;
-            RowVector4d izij=QInv1(zij);
+            RowVector4d izij=QInv(zij);
        
             
-            RowVector4d G1i=QMult1(c1,zi)+d1;
-            RowVector4d G2i=QMult1(c2,zi)+d2;
-            RowVector4d G1j=QMult1(c1,zj)+d1;
-            RowVector4d G2j=QMult1(c2,zj)+d2;
+            RowVector4d G1i=QMult(c1,zi)+d1;
+            RowVector4d G2i=QMult(c2,zi)+d2;
+            RowVector4d G1j=QMult(c1,zj)+d1;
+            RowVector4d G2j=QMult(c2,zj)+d2;
             
             
             
@@ -731,20 +759,20 @@ public:
             
             
             //c1 derivatives
-            GetQuatDerivativeValues(GradValues, CompTriCounter, c1TriPoses, UnitQuat, QMult1(zi,QMult1(izij,QConj1(G1j))), false, false);
-            GetQuatDerivativeValues(GradValues, CompTriCounter, c1TriPoses, QMult1(G1i,QMult1(izij,QConj1(zj))), UnitQuat, true, true);
+            hedra::quatDerivativeValues(GradValues, CompTriCounter, c1TriPoses, UnitQuat, QMult(zi,QMult(izij,QConj(G1j))), false, false);
+            hedra::quatDerivativeValues(GradValues, CompTriCounter, c1TriPoses, QMult(G1i,QMult(izij,QConj(zj))), UnitQuat, true, true);
             
             //d1 derivatives
-            GetQuatDerivativeValues(GradValues, CompTriCounter, d1TriPoses, UnitQuat, QMult1(izij,QConj1(G1j)), false, false);
-            GetQuatDerivativeValues(GradValues, CompTriCounter, d1TriPoses, QMult1(G1i,izij), UnitQuat, true, true);
+            hedra::quatDerivativeValues(GradValues, CompTriCounter, d1TriPoses, UnitQuat, QMult(izij,QConj(G1j)), false, false);
+            hedra::quatDerivativeValues(GradValues, CompTriCounter, d1TriPoses, QMult(G1i,izij), UnitQuat, true, true);
             
             //c2 derivatives
-            GetQuatDerivativeValues(GradValues, CompTriCounter, c2TriPoses, -UnitQuat, QMult1(zi,QMult1(izij,QConj1(G2j))), false, false);
-            GetQuatDerivativeValues(GradValues, CompTriCounter, c2TriPoses, QMult1(G2i,QMult1(izij,QConj1(zj))), -UnitQuat, true, true);
+            hedra::quatDerivativeValues(GradValues, CompTriCounter, c2TriPoses, -UnitQuat, QMult(zi,QMult(izij,QConj(G2j))), false, false);
+            hedra::quatDerivativeValues(GradValues, CompTriCounter, c2TriPoses, QMult(G2i,QMult(izij,QConj(zj))), -UnitQuat, true, true);
             
             //d2 derivatives
-            GetQuatDerivativeValues(GradValues, CompTriCounter, d2TriPoses, -UnitQuat, QMult1(izij,QConj1(G2j)), false, false);
-            GetQuatDerivativeValues(GradValues, CompTriCounter, d2TriPoses, QMult1(G2i,izij), -UnitQuat, true, true);
+            hedra::quatDerivativeValues(GradValues, CompTriCounter, d2TriPoses, -UnitQuat, QMult(izij,QConj(G2j)), false, false);
+            hedra::quatDerivativeValues(GradValues, CompTriCounter, d2TriPoses, QMult(G2i,izij), -UnitQuat, true, true);
             
             CompTriCounter+=64;
         }
@@ -768,8 +796,10 @@ public:
         
     }
     
-    void Reformulate(int CurrIter, int MaxIterations, const VectorXd& CurrSolution, double PrevError)
+    void Reformulate(int CurrIter, int MaxIterations, const Eigen::VectorXd& CurrSolution, double PrevError)
     {
+        using namespace Eigen;
+        using namespace std;
         double rate=ConstVec.lpNorm<Infinity>()/PrevError;
         double ReduceRate=min(rate/2.0,1.0);
         
@@ -778,8 +808,10 @@ public:
         
     }
     
-    void UpdateConstraints(const VectorXd& CurrSolution)
+    void UpdateConstraints(const Eigen::VectorXd& CurrSolution)
     {
+        using namespace Eigen;
+        using namespace std;
         for (int i=0;i<FaceCornerIndices.rows();i++){
             RowVector4d c1=CurrSolution.segment(4*2*FaceCornerIndices(i,0),4).transpose();
             RowVector4d d1=CurrSolution.segment(4*(2*FaceCornerIndices(i,0)+1),4).transpose();
@@ -789,12 +821,12 @@ public:
             RowVector4d zj=OrigVq.row(FaceCornerIndices(i,3));
             RowVector4d zij=zj-zi;
             
-            RowVector4d G1i=QMult1(c1,zi)+d1;
-            RowVector4d G2i=QMult1(c2,zi)+d2;
-            RowVector4d G1j=QMult1(c1,zj)+d1;
-            RowVector4d G2j=QMult1(c2,zj)+d2;
+            RowVector4d G1i=QMult(c1,zi)+d1;
+            RowVector4d G2i=QMult(c2,zi)+d2;
+            RowVector4d G1j=QMult(c1,zj)+d1;
+            RowVector4d G2j=QMult(c2,zj)+d2;
             
-            CompVec.segment(4*i,4)=QMult1(QMult1(G1i, QInv1(zij)), QConj1(G1j))-QMult1(QMult1(G2i, QInv1(zij)), QConj1(G2j));
+            CompVec.segment(4*i,4)=QMult(QMult(G1i, QInv(zij)), QConj(G1j))-QMult(QMult(G2i, QInv(zij)), QConj(G2j));
         }
         
         
@@ -802,7 +834,7 @@ public:
             RowVector4d c=CurrSolution.segment(4*2*i,4).transpose();
             RowVector4d d=CurrSolution.segment(4*(2*i+1),4).transpose();
             
-            ImagVec(i)=QMult1(c,QConj1(d))(0);
+            ImagVec(i)=QMult(c,QConj(d))(0);
         }
         
         FirstcdVec<<CurrSolution.segment(0,8)-Firstcd;
@@ -822,7 +854,7 @@ public:
     
     bool isTerminate()
     {
-        return(ConstVec.lpNorm<Infinity>() < ConstTolerance);
+        return(ConstVec.lpNorm<Eigen::Infinity>() < ConstTolerance);
     }
 };
 

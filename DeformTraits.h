@@ -9,17 +9,19 @@
 #ifndef testigl_DeformTraits_h
 #define testigl_DeformTraits_h
 
-#include "QuaternionOps.h"
+#include <hedra/QuaternionOps.h>
 
 typedef std::complex<double> Complex;
 
 class DeformTraitsEdgeDeviation2D{
 public:
-    VectorXcd OrigVc;
-    MatrixXi E2V, D, F;
-    VectorXi ConstIndices;//, VarIndices;
-    VectorXcd ComplexConstPoses;
-    VectorXcd InitSolution;
+    
+    typedef std::complex<double> Complex;
+    Eigen::VectorXcd OrigVc;
+    Eigen::MatrixXi E2V, D, F;
+    Eigen::VectorXi ConstIndices;//, VarIndices;
+    Eigen::VectorXcd ComplexConstPoses;
+    Eigen::VectorXcd InitSolution;
     
     double SmoothFactor;
     double CloseFactor;
@@ -31,31 +33,31 @@ public:
     
     int SolutionSize;
     
-    VectorXcd CurrSolution;  //the complex one
-    VectorXcd CurrMobRecips;
-    VectorXcd CurrLocations;
-    VectorXcd CurrEdgeDeviations;
-    VectorXcd CurrEdges;
-    VectorXcd AMAPVec;
-    VectorXcd MobVec;
-    VectorXcd PosVec;
-    VectorXcd RigidVec;
-    VectorXcd CloseVec;
-    VectorXcd DeviationVec;
-    VectorXd MCVec;
-    VectorXd IAPVec;
-    VectorXcd FCR;
+    Eigen::VectorXcd CurrSolution;  //the complex one
+    Eigen::VectorXcd CurrMobRecips;
+    Eigen::VectorXcd CurrLocations;
+    Eigen::VectorXcd CurrEdgeDeviations;
+    Eigen::VectorXcd CurrEdges;
+    Eigen::VectorXcd AMAPVec;
+    Eigen::VectorXcd MobVec;
+    Eigen::VectorXcd PosVec;
+    Eigen::VectorXcd RigidVec;
+    Eigen::VectorXcd CloseVec;
+    Eigen::VectorXcd DeviationVec;
+    Eigen::VectorXd MCVec;
+    Eigen::VectorXd IAPVec;
+    Eigen::VectorXcd FCR;
     
-    SparseMatrix<Complex> d0;
+    Eigen::SparseMatrix<Complex> d0;
     
-    VectorXi ComplexGradRows;
-    VectorXi ComplexGradCols;
-    VectorXcd ComplexGradValues;
+    Eigen::VectorXi ComplexGradRows;
+    Eigen::VectorXi ComplexGradCols;
+    Eigen::VectorXcd ComplexGradValues;
     
     
-    VectorXi GradRows;
-    VectorXi GradCols;
-    VectorXd GradValues;
+    Eigen::VectorXi GradRows;
+    Eigen::VectorXi GradCols;
+    Eigen::VectorXd GradValues;
     
     //into the complex values
     int AMAPTriOffset, AMAPRowOffset;
@@ -70,11 +72,22 @@ public:
     int MCTriOffset, MCRowOffset;
     int IAPTriOffset, IAPRowOffset;
     
-    VectorXd TotalVec;
-    VectorXcd ConstVec;
+    Eigen::VectorXd TotalVec;
+    Eigen::VectorXcd ConstVec;
     
 
-    void Initialize(const VectorXcd& inOrigVc, const MatrixXi& inD, const MatrixXi& inF, const MatrixXi& inE2V, const VectorXi& inConstIndices, const VectorXcd& inFCR, bool inisExactMC, bool inisExactIAP, double inRigidRatio){
+    void Initialize(const Eigen::VectorXcd& inOrigVc,
+                    const Eigen::MatrixXi& inD,
+                    const Eigen::MatrixXi& inF,
+                    const Eigen::MatrixXi& inE2V,
+                    const Eigen::VectorXi& inConstIndices,
+                    const Eigen::VectorXcd& inFCR,
+                    bool inisExactMC,
+                    bool inisExactIAP,
+                    double inRigidRatio){
+        
+        using namespace Eigen;
+        using namespace std;
         
         F=inF; D=inD; E2V=inE2V;
         ConstIndices=inConstIndices; //VarIndices=inVarIndices;
@@ -333,7 +346,10 @@ public:
         //cout<<"GradRows: "<<GradRows<<endl;
     }
     
-    void UpdateEnergy(const VectorXd& CurrSolutionReal){
+    void UpdateEnergy(const Eigen::VectorXd& CurrSolutionReal){
+        
+        using namespace Eigen;
+        using namespace std;
         
         CurrSolution.array().real()<<CurrSolutionReal.head(CurrSolutionReal.size()/2);
         CurrSolution.array().imag()<<CurrSolutionReal.tail(CurrSolutionReal.size()/2);
@@ -361,8 +377,10 @@ public:
     }
     
     
-    void UpdateGradient(const VectorXd& CurrSolutionReal){
+    void UpdateGradient(const Eigen::VectorXd& CurrSolutionReal){
         
+        using namespace Eigen;
+        using namespace std;
         
         CurrSolution.array().real()<<CurrSolutionReal.head(CurrSolutionReal.size()/2);
         CurrSolution.array().imag()<<CurrSolutionReal.tail(CurrSolutionReal.size()/2);
@@ -469,23 +487,23 @@ public:
     
     
     //should be called when constraints are updated!!!
-    void Reformulate(int NumIteration, int MaxIteration, const VectorXd& CurrSolutionReal, double PrevError)
+    void Reformulate(int NumIteration, int MaxIteration, const Eigen::VectorXd& CurrSolutionReal, double PrevError)
     {
-        VectorXcd CurrSolution(CurrSolutionReal.size()/2);
+        Eigen::VectorXcd CurrSolution(CurrSolutionReal.size()/2);
         CurrSolution.array().real()=CurrSolutionReal.head(CurrSolutionReal.size()/2);
         CurrSolution.array().imag()=CurrSolutionReal.tail(CurrSolutionReal.size()/2);
         InitSolution=CurrSolution;
 
-        double rate=ConstVec.lpNorm<Infinity>()/PrevError;
-        double ReduceRate=min(rate/2.0,1.0);
+        double rate=ConstVec.lpNorm<Eigen::Infinity>()/PrevError;
+        double ReduceRate=std::min(rate/2.0,1.0);
         
         SmoothFactor*=0.9-0.7*(1.0-ReduceRate);
 
     }
     
-    void UpdateConstraints(const VectorXd& CurrSolutionReal)
+    void UpdateConstraints(const Eigen::VectorXd& CurrSolutionReal)
     {
-        VectorXcd CurrSolution(CurrSolutionReal.size()/2);
+        Eigen::VectorXcd CurrSolution(CurrSolutionReal.size()/2);
         CurrSolution.array().real()=CurrSolutionReal.head(CurrSolutionReal.size()/2);
         CurrSolution.array().imag()=CurrSolutionReal.tail(CurrSolutionReal.size()/2);
         
@@ -531,14 +549,14 @@ public:
     //should be called when constraints are updated!!
     bool isTerminate()
     {
-        return (ConstVec.lpNorm<Infinity>()<ConstTolerance);
+        return (ConstVec.lpNorm<Eigen::Infinity>()<ConstTolerance);
     }
 
 };
 
 
 
-class DeformTraitsCornerVars3D
+/*class DeformTraitsCornerVars3D
 {
 public:
     
@@ -668,7 +686,7 @@ public:
         }
         
         /*******************************AMAP Energy********************************************/
-        AMAPTriOffset=0;
+        /*AMAPTriOffset=0;
         AMAPRowOffset=0;
         for (int i=0;i<CornerPairs.rows();i++){
             for (int j=0;j<4;j++){
@@ -680,7 +698,7 @@ public:
         }
         
         /*******************************Rigidity Energy*****************************************/
-        RigidTriOffset=AMAPTriOffset+2*4*CornerPairs.rows();
+        /*RigidTriOffset=AMAPTriOffset+2*4*CornerPairs.rows();
         RigidRowOffset=AMAPRowOffset+4*CornerPairs.rows();
         for (int i=0;i<EdgeCornerPairs.rows();i++){
             for (int j=0;j<4;j++){
@@ -693,7 +711,7 @@ public:
 
         
         /****************************Closeness Energy*******************/
-        CloseTriOffset=RigidTriOffset+2*4*EdgeCornerPairs.rows();
+        /*CloseTriOffset=RigidTriOffset+2*4*EdgeCornerPairs.rows();
         CloseRowOffset=RigidRowOffset+4*EdgeCornerPairs.rows();
         for (int i=0;i<SolutionSize;i++){
             GradRows(CloseTriOffset+i)=CloseRowOffset+i;
@@ -702,7 +720,7 @@ public:
         }
         
         /****************************Compatibility Constraints*****************/
-        CompTriOffset=CloseTriOffset+SolutionSize;
+        /*CompTriOffset=CloseTriOffset+SolutionSize;
         CompRowOffset=CloseRowOffset+SolutionSize;
         int CompTriCounter=CompTriOffset;
         Vector4i XiTriPoses; XiTriPoses<<0,8,18,28;
@@ -733,7 +751,7 @@ public:
         }
         
         /****************************Positional Constraints*******************/
-        PosTriOffset=CompTriOffset+38*EdgeCornerPairs.rows();
+        /*PosTriOffset=CompTriOffset+38*EdgeCornerPairs.rows();
         PosRowOffset=CompRowOffset+4*EdgeCornerPairs.rows();
         
         for (int i=0;i<ConstIndices.size();i++){
@@ -745,7 +763,7 @@ public:
         
         
         /****************************Metric-Conformal Constraints*************/
-        if (isExactMC){
+        /*if (isExactMC){
             MCTriOffset=PosTriOffset+3*ConstIndices.size();
             MCRowOffset=PosRowOffset+3*ConstIndices.size();
             for (int i=0;i<CornerPairs.rows();i++){
@@ -776,9 +794,9 @@ public:
         cout<<"GradRows and Cols"<<MatGrads<<endl;
         int kaka=8;*/
         
-    }
+    /*}
     
-    void UpdateEnergy(const VectorXd& CurrSolution){
+    /*void UpdateEnergy(const VectorXd& CurrSolution){
         
         CurrX<<CurrSolution.head(4*NumCorners);
         CurrLocations<<CurrSolution.tail(3*OrigVq.rows());
@@ -808,7 +826,7 @@ public:
         CurrLocations<<CurrSolution.tail(3*OrigVq.rows());
         
         /*******************************AMAP Energy********************************************/
-        for (int i=0;i<CornerPairs.rows();i++){
+        /*for (int i=0;i<CornerPairs.rows();i++){
             for (int j=0;j<4;j++){
                 GradValues(AMAPTriOffset+2*(4*i+j))=-SmoothFactor;
                 GradValues(AMAPTriOffset+2*(4*i+j)+1)=SmoothFactor;
@@ -816,7 +834,7 @@ public:
         }
         
         /*******************************Rigidity Energy*****************************************/
-        for (int i=0;i<EdgeCornerPairs.rows();i++){
+        /*for (int i=0;i<EdgeCornerPairs.rows();i++){
             for (int j=0;j<4;j++){
                 GradValues(RigidTriOffset+2*(4*i+j))=-SmoothFactor*RigidRatio;
                 GradValues(RigidTriOffset+2*(4*i+j)+1)=SmoothFactor*RigidRatio;
@@ -826,7 +844,7 @@ public:
         //closeness energy is constant
         
         /****************************Compatibility Constraints*****************/
-        int CompTriCounter=CompTriOffset;
+        /*int CompTriCounter=CompTriOffset;
         Vector4i XiTriPoses; XiTriPoses<<0,8,18,28;
         Vector4i XjTriPoses; XjTriPoses<<4,12,22,32;
         for (int i=0;i<EdgeCornerPairs.rows();i++){
@@ -851,12 +869,12 @@ public:
         
         
         /****************************Positional Constraints*******************/
-        for (int i=0;i<ConstIndices.size();i++)
+        /*for (int i=0;i<ConstIndices.size();i++)
             for (int k=0;k<3;k++)
                 GradValues(PosTriOffset+3*i+k)=PosFactor;
         
         /****************************Metric-Conformal Constraints*************/
-        if (isExactMC){
+        /*if (isExactMC){
             for (int i=0;i<CornerPairs.rows();i++){
                 RowVector4d Xi=CurrX.segment(4*CornerPairs(i,0),4).transpose();
                 RowVector4d Xj=CurrX.segment(4*CornerPairs(i,1),4).transpose();
@@ -929,7 +947,7 @@ public:
         return (ConstVec.lpNorm<Infinity>()<ConstTolerance);
     }
 
-};
+};*/
 
 
 

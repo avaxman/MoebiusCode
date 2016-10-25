@@ -7,9 +7,8 @@
 //
 
 #include "Deform2D.h"
-//#include <igl/edge_topology.h>
-//#include <igl/general_edge_topology.h>
 #include <hedra/polygonal_edge_topology.h>
+#include <hedra/QuaternionOps.h>
 #include <igl/colon.h>
 #include <igl/setdiff.h>
 #include <igl/slice.h>

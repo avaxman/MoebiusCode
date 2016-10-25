@@ -7,17 +7,18 @@
 #include "Deform3D.h"
 #include "Deform2D.h"
 #include "math.h"
-#include "QuaternionOps.h"
 #include "igl/serialize.h"
 #include <igl/sortrows.h>
 #include <igl/readOBJ.h>
 #include <igl/writeOBJ.h>
+#include <hedra/QuaternionOps.h>
 #include <hedra/polygonal_read_OFF.h>
 #include <hedra/triangulate_mesh.h>
 #include <hedra/polygonal_edge_topology.h>
+#include <hedra/scalar2RGB.h>
 #include <igl/per_vertex_normals.h>
 #include <algorithm>
-#include <hedra/scalar2RGB.h>
+
 
 using namespace Eigen;
 using namespace std;
@@ -617,7 +618,7 @@ bool mouse_move(igl::viewer::Viewer& viewer, int mouse_x, int mouse_y)
         for (int i=0;i<ConstPoses.size();i++)
             ConstPosesMat.row(i)=ConstPoses[i];
         
-        (IS_COMPLEX ? md2.UpdateDeformation(ConstPosesMat,100, isExactMC, isExactIAP) : md3.UpdateDeformation(ConstPosesMat,100));
+        (IS_COMPLEX ? md2.UpdateDeformation(ConstPosesMat,200, isExactMC, isExactIAP) : md3.UpdateDeformation(ConstPosesMat,200));
         RecomputeInterpolation=true;
     }
     

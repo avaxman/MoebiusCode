@@ -11,6 +11,9 @@
 #include <hedra/triangulate_mesh.h>
 #include <hedra/polygonal_edge_topology.h>
 #include <hedra/EigenSolverWrapper.h>
+#include <hedra/MoebiusCornerVarsTraits.h>
+#include <hedra/QuaternionOps.h>
+#include <hedra/LMSolver.h>
 #include <igl/colon.h>
 #include <igl/setdiff.h>
 #include <igl/slice.h>
@@ -18,10 +21,10 @@
 #include <igl/speye.h>
 #include <igl/colon.h>
 #include "ExtraFunctions.h"
-#include "QuaternionOps.h"
-#include "DeformTraits.h"
+//#include "QuaternionOps.h"
+//#include "DeformTraits.h"
 #include "PrescribeEdgeJumps.h"
-#include "QuadConstSolver.h"
+//#include "QuadConstSolver.h"
 #include "UnitSphereMoebiusTraits.h"
 #include <set>
 
@@ -41,7 +44,7 @@ void Quat2Vector(const MatrixXd& QVec, VectorXd& RawVec)
 {
     RawVec.resize(QVec.size());
     for (int i=0;i<QVec.rows();i++)
-        RawVec.segment(4*i,4)=QConj1(QVec.row(i)).transpose();
+        RawVec.segment(4*i,4)=QConj(QVec.row(i)).transpose();
     
 }
 
@@ -57,7 +60,7 @@ void ComputeCR(const MatrixXd& Vq, const MatrixXi& D, const MatrixXi& F, const M
         RowVector4d qk=Vq.row(QuadVertexIndices(i,2));
         RowVector4d ql=Vq.row(QuadVertexIndices(i,3));
         
-        ECR.row(i)=QMult1(QMult1(qj-qi, QInv1(qk-qj)),QMult1(ql-qk, QInv1(qi-ql)));
+        ECR.row(i)=QMult(QMult(qj-qi, QInv(qk-qj)),QMult(ql-qk, QInv(qi-ql)));
         
     }
     
@@ -71,7 +74,7 @@ void ComputeCR(const MatrixXd& Vq, const MatrixXi& D, const MatrixXi& F, const M
             RowVector4d qk=Vq.row(F(i,j+2));
             RowVector4d ql=Vq.row(F(i,j+3));
             
-            FCR.row(CurrFCR++)=QMult1(QMult1(qj-qi, QInv1(qk-qj)),QMult1(ql-qk, QInv1(qi-ql)));
+            FCR.row(CurrFCR++)=QMult(QMult(qj-qi, QInv(qk-qj)),QMult(ql-qk, QInv(qi-ql)));
         }
     }
     
@@ -252,7 +255,9 @@ void MoebiusDeformation3D::SetupMesh(const MatrixXd& InV, const MatrixXi& InD, c
     if(!d0Solver.factorize(S, false))
         // decomposition failed
         cout<<"Solver Failed to factorize! "<<endl;
-
+    
+    DeformTraits.init(OrigV, D, F, false);
+    DeformSolver.init(&DeformLinearSolver, &DeformTraits);
 }
 
 //only effectively works for quad meshes
@@ -274,7 +279,9 @@ void MoebiusDeformation3D::InitDeformation(const VectorXi& InConstIndices, bool 
 
     ConstIndices=InConstIndices;
     
-    DeformTraits.Initialize(OrigVq, D, F, ConstIndices,CornerPairs, NumCorners, CornerOffset, isExactMC, isExactIAP, RigidRatio);
+    DeformTraits.init(OrigV, D, F, isExactMC, ConstIndices);
+    DeformTraits.rigidRatio=RigidRatio;
+    DeformSolver.init(&DeformLinearSolver, &DeformTraits);
     
     //checking traits
     /*DeformTraits.InitSolution=VectorXd::Random(4*NumCorners+3*OrigVq.rows());
@@ -282,9 +289,7 @@ void MoebiusDeformation3D::InitDeformation(const VectorXi& InConstIndices, bool 
     DeformTraits.SmoothFactor=100.0;
     DeformTraits.PosFactor=10.0;
     CheckTraits<DeformTraitsCornerVars3D>(DeformTraits, 4*NumCorners+3*OrigVq.rows());*/
-    
-    DeformSolver.Initialize(&DeformTraits);
-    
+ 
 }
 
 
@@ -293,7 +298,7 @@ void MoebiusDeformation3D::InitDeformation(const VectorXi& InConstIndices, bool 
 void MoebiusDeformation3D::UpdateDeformation(const MatrixXd& ConstPoses, int MaxIterations)
 {
     
-    Coords2Quat(ConstPoses, QuatConstPoses);
+    /*Coords2Quat(ConstPoses, QuatConstPoses);
     
     VectorXd InitSolution(4*NumCorners+3*OrigVq.rows());
 
@@ -306,17 +311,18 @@ void MoebiusDeformation3D::UpdateDeformation(const MatrixXd& ConstPoses, int Max
         InitSolution.segment(4*NumCorners+3*i,3)=DeformV.row(i);
     
 
-    DeformTraits.InitSolution=InitSolution;
-    DeformTraits.ConstPoses=ConstPoses;
-    DeformTraits.SmoothFactor=100.0;
-    DeformTraits.PosFactor=10.0;
-    VectorXd Solution=DeformSolver.Solve(InitSolution, 1.0, MaxIterations);
+    DeformTraits.InitSolution=InitSolution;*/
+    DeformTraits.constPoses=ConstPoses;
+    DeformTraits.smoothFactor=100.0;
+    DeformTraits.posFactor=10.0;
+    DeformSolver.solve(true);
+    DeformV=DeformTraits.fullSolution;
   
-    for (int i=0;i<DeformX.rows();i++)
+    /*for (int i=0;i<DeformX.rows();i++)
         DeformX.row(i)=Solution.segment(4*i,4);
         
     for (int i=0;i<DeformVq.rows();i++)
-        DeformV.row(i)=Solution.segment(4*NumCorners+3*i,3);
+        DeformV.row(i)=Solution.segment(4*NumCorners+3*i,3);*/
     
 
     Coords2Quat(DeformV, DeformVq);
@@ -327,10 +333,6 @@ void MoebiusDeformation3D::UpdateDeformation(const MatrixXd& ConstPoses, int Max
             Centers.row(i)+=DeformV.row(F(i,j))/(double)D(i);
     
     EdgeDeformV<<DeformV, Centers;
-    
-    DeformConvErrors=DeformSolver.ConvErrors;
-
-
 }
 
 
@@ -372,10 +374,10 @@ void ComposeMobius(const RowVector4d& a1, const RowVector4d& b1, const RowVector
     
     RowVector4d ta, tb, tc, td;  //so to be able to use same variables
     
-    ta=QMult1(a1, a2)+QMult1(b1, c2);
-    tb=QMult1(a1, b2)+QMult1(b1, d2);
-    tc=QMult1(c1, a2)+QMult1(d1, c2);
-    td=QMult1(c1, b2)+QMult1(d1, d2);
+    ta=QMult(a1, a2)+QMult(b1, c2);
+    tb=QMult(a1, b2)+QMult(b1, d2);
+    tc=QMult(c1, a2)+QMult(d1, c2);
+    td=QMult(c1, b2)+QMult(d1, d2);
     
     a=ta;
     b=tb;
@@ -424,7 +426,7 @@ void GetMobiusCoeffs(RowVector4d& a, RowVector4d& b, RowVector4d& c, RowVector4d
     uc<<Solution.segment(8,4).transpose();
     ud<<Solution.segment(12,4).transpose();
     
-    cout<<"uaud-ubuc="<<QMult1(QConj1(ua), ud)-QMult1(QConj1(ub),uc)<<endl;
+    cout<<"uaud-ubuc="<<QMult(QConj(ua), ud)-QMult(QConj(ub),uc)<<endl;
     
     //testing center
     if (b.norm()>d.norm()){
@@ -445,27 +447,27 @@ void GetMobiusCoeffs(RowVector4d& a, RowVector4d& b, RowVector4d& c, RowVector4d
     ComposeMobius(rw*UnitQuat, cw, ZeroQuat, UnitQuat, a, b, c, d, a, b, c, d);
  
     
-    //double det=sqrt(abs((QMult1(QConj1(a), d)-QMult1(QConj1(b),c))(0)));
-    double det=sqrt(abs((QMult1(a, QConj1(d))+QMult1(b,QConj1(c)))(0)));
+    //double det=sqrt(abs((QMult(QConj(a), d)-QMult(QConj(b),c))(0)));
+    double det=sqrt(abs((QMult(a, QConj(d))+QMult(b,QConj(c)))(0)));
     a/=det;
     b/=det;
     c/=det;
     d/=det;
-    cout<<"ad-bc="<<QMult1(QConj1(a), d)-QMult1(QConj1(b),c)<<endl;
-    cout<<"ad+bc="<<QMult1(a, QConj1(d))+QMult1(b,QConj1(c))<<endl;
+    cout<<"ad-bc="<<QMult(QConj(a), d)-QMult(QConj(b),c)<<endl;
+    cout<<"ad+bc="<<QMult(a, QConj(d))+QMult(b,QConj(c))<<endl;
     
     cout<<"Testing Final Mobius Coeffs: "<<endl;
     MatrixXd Transz=qz;
     for (int i=0;i<z.rows();i++){
-        Transz.row(i)=QMult1(QMult1(a,qz.row(i))+b,QInv1(QMult1(c,qz.row(i))+d));
+        Transz.row(i)=QMult(QMult(a,qz.row(i))+b,QInv(QMult(c,qz.row(i))+d));
         cout<<"(aq+b)*inv(cq+d)-w: "<<Transz.row(i)-qw.row(i)<<endl;
     }
     
     
     /*for (int i=1;i<z.rows();i++){
-        RowVector4d Xi=QInv1(QMult1(c,qz.row(0))+d);
-        RowVector4d Xj=QInv1(QMult1(c,qz.row(i))+d);
-        RowVector4d TransVecq=QMult1(QMult1(QConj1(Xj), qz.row(i)-qz.row(0)), Xi);
+        RowVector4d Xi=QInv(QMult(c,qz.row(0))+d);
+        RowVector4d Xj=QInv(QMult(c,qz.row(i))+d);
+        RowVector4d TransVecq=QMult(QMult(QConj(Xj), qz.row(i)-qz.row(0)), Xi);
         cout<<"Xj*qij*Xi:"<<TransVecq<<endl;
         cout<<"Actual vectors: "<<qw.row(i)-qw.row(0)<<endl;
     }
@@ -543,13 +545,13 @@ void MoebiusDeformation3D::SetupInterpolation(bool isExactMC, bool isExactIAP, b
     }
     
     DeformGlobalMoebius.resize(2,4); DeformGlobalMoebius<<c,d;  //TODO: the inside out testing
-    //cout<<"det of t=0->t=1 transformation: "<<QMult1(QConj1(a),d)-QMult1(QConj1(b),c)<<endl;
+    //cout<<"det of t=0->t=1 transformation: "<<QMult(QConj(a),d)-QMult(QConj(b),c)<<endl;
     
     //testing entire mesh
     for (int i=1;i<OrigVq.rows();i++){
-        RowVector4d Xi=QInv1(QMult1(c,OrigVq.row(0))+d);
-        RowVector4d Xj=QInv1(QMult1(c,OrigVq.row(i))+d);
-        RowVector4d TransVecq=QMult1(QMult1(QConj1(Xj), OrigVq.row(i)-OrigVq.row(0)), Xi);
+        RowVector4d Xi=QInv(QMult(c,OrigVq.row(0))+d);
+        RowVector4d Xj=QInv(QMult(c,OrigVq.row(i))+d);
+        RowVector4d TransVecq=QMult(QMult(QConj(Xj), OrigVq.row(i)-OrigVq.row(0)), Xi);
         cout<<"Xj*qij*Xi:"<<TransVecq<<endl;
         cout<<"Actual vectors: "<<DeformVq.row(i)-DeformVq.row(0)<<endl;
     }
@@ -573,15 +575,15 @@ void MoebiusDeformation3D::SetupInterpolation(bool isExactMC, bool isExactIAP, b
             int f2i=E2Fi(InnerEdges(i),1);
             RowVector4d zij=OrigVq.row(E2V(InnerEdges(i),1))-OrigVq.row(E2V(InnerEdges(i),0));
             
-            RowVector4d G1i=QInv1(DeformX.row(CornerOffset(f1)+f1i));
-            RowVector4d G2i=QInv1(DeformX.row(CornerOffset(f2)+f2i));
-            RowVector4d G1j=QInv1(DeformX.row(CornerOffset(f1)+f1j));
-            RowVector4d G2j=QInv1(DeformX.row(CornerOffset(f2)+f2j));
+            RowVector4d G1i=QInv(DeformX.row(CornerOffset(f1)+f1i));
+            RowVector4d G2i=QInv(DeformX.row(CornerOffset(f2)+f2i));
+            RowVector4d G1j=QInv(DeformX.row(CornerOffset(f1)+f1j));
+            RowVector4d G2j=QInv(DeformX.row(CornerOffset(f2)+f2j));
             
-            EdgeCoherence.row(i)=QMult1(QConj1(QInv1(G1i)),QMult1(zij, QInv1(G1j)))-QMult1(QConj1(QInv1(G2i)),QMult1(zij, QInv1(G2j)));
+            EdgeCoherence.row(i)=QMult(QConj(QInv(G1i)),QMult(zij, QInv(G1j)))-QMult(QConj(QInv(G2i)),QMult(zij, QInv(G2j)));
             
-            EdgeCompCoeffs.row(i)=QMult1(QInv1(G2i),G1i);
-            Coherence.row(i)=QMult1(QInv1(zij),QMult1(QMult1(QInv1(G1j),G2j),zij))-QConj1(EdgeCompCoeffs.row(i));
+            EdgeCompCoeffs.row(i)=QMult(QInv(G2i),G1i);
+            Coherence.row(i)=QMult(QInv(zij),QMult(QMult(QInv(G1j),G2j),zij))-QConj(EdgeCompCoeffs.row(i));
             
         }
         
@@ -628,32 +630,32 @@ void MoebiusDeformation3D::Interpolate(double t, int NumIterations)
         //for conj(G)
         //G2i*g=G1i   (actually conj(g)*conj(G2i)-conj(G1i) )
         //G1j*e*conj(g)*inv(e)=G2j  (actually conj(inv(e))*g*conj(e)*conj(G2j)-conj(G1j) )
-        CompMatRowIndices(4*i)=2*i; CompMatColIndices(4*i)=4*i+2; CompMatValues.row(4*i)= QConj1(gt.row(i));
+        CompMatRowIndices(4*i)=2*i; CompMatColIndices(4*i)=4*i+2; CompMatValues.row(4*i)= QConj(gt.row(i));
         CompMatRowIndices(4*i+1)=2*i; CompMatColIndices(4*i+1)=4*i; CompMatValues.row(4*i+1)= -UnitQuat;
-        CompMatRowIndices(4*i+2)=2*i+1; CompMatColIndices(4*i+2)=4*i+1; CompMatValues.row(4*i+2)= QMult1(QMult1(QInv1(QConj1(zj-zi)),gt.row(i)), QConj1(zj-zi));
+        CompMatRowIndices(4*i+2)=2*i+1; CompMatColIndices(4*i+2)=4*i+1; CompMatValues.row(4*i+2)= QMult(QMult(QInv(QConj(zj-zi)),gt.row(i)), QConj(zj-zi));
         CompMatRowIndices(4*i+3)=2*i+1; CompMatColIndices(4*i+3)=4*i+3; CompMatValues.row(4*i+3)= -UnitQuat;
         
         
         //derivative conj(G1i), conj(G1j) to conj(c1),conj(d1)
-        cdtoGRowIndices(8*i)=4*i; cdtoGColIndices(8*i)=2*FaceCornerPairs(i,0); cdtoGValues.row(8*i)=QConj1(zi);
+        cdtoGRowIndices(8*i)=4*i; cdtoGColIndices(8*i)=2*FaceCornerPairs(i,0); cdtoGValues.row(8*i)=QConj(zi);
         cdtoGRowIndices(8*i+1)=4*i; cdtoGColIndices(8*i+1)=2*FaceCornerPairs(i,0)+1; cdtoGValues.row(8*i+1)=UnitQuat;
-        cdtoGRowIndices(8*i+2)=4*i+1; cdtoGColIndices(8*i+2)=2*FaceCornerPairs(i,0); cdtoGValues.row(8*i+2)=QConj1(zj);
+        cdtoGRowIndices(8*i+2)=4*i+1; cdtoGColIndices(8*i+2)=2*FaceCornerPairs(i,0); cdtoGValues.row(8*i+2)=QConj(zj);
         cdtoGRowIndices(8*i+3)=4*i+1; cdtoGColIndices(8*i+3)=2*FaceCornerPairs(i,0)+1; cdtoGValues.row(8*i+3)=UnitQuat;
         
         //derivative conj(Gi2), conj(G2j) to conj(c2),conj(d2)
-        cdtoGRowIndices(8*i+4)=4*i+2; cdtoGColIndices(8*i+4)=2*FaceCornerPairs(i,1); cdtoGValues.row(8*i+4)=QConj1(zi);
+        cdtoGRowIndices(8*i+4)=4*i+2; cdtoGColIndices(8*i+4)=2*FaceCornerPairs(i,1); cdtoGValues.row(8*i+4)=QConj(zi);
         cdtoGRowIndices(8*i+5)=4*i+2; cdtoGColIndices(8*i+5)=2*FaceCornerPairs(i,1)+1; cdtoGValues.row(8*i+5)=UnitQuat;
-        cdtoGRowIndices(8*i+6)=4*i+3; cdtoGColIndices(8*i+6)=2*FaceCornerPairs(i,1); cdtoGValues.row(8*i+6)=QConj1(zj);
+        cdtoGRowIndices(8*i+6)=4*i+3; cdtoGColIndices(8*i+6)=2*FaceCornerPairs(i,1); cdtoGValues.row(8*i+6)=QConj(zj);
         cdtoGRowIndices(8*i+7)=4*i+3; cdtoGColIndices(8*i+7)=2*FaceCornerPairs(i,1)+1; cdtoGValues.row(8*i+7)=UnitQuat;
     }
     
     SparseMatrix<double> cdtoG;
-    Quat2SparseMatrix(cdtoGRowIndices, cdtoGColIndices, cdtoGValues,cdtoG,  4*FaceCornerPairs.rows(), 2*F.rows());
+    quat2SparseMatrix(cdtoGRowIndices, cdtoGColIndices, cdtoGValues,cdtoG,  4*FaceCornerPairs.rows(), 2*F.rows());
 
     SparseMatrix<double> CompMat;
-    Quat2SparseMatrix(CompMatRowIndices, CompMatColIndices, CompMatValues, CompMat, 2*FaceCornerPairs.rows(), 4*FaceCornerPairs.rows());
+    quat2SparseMatrix(CompMatRowIndices, CompMatColIndices, CompMatValues, CompMat, 2*FaceCornerPairs.rows(), 4*FaceCornerPairs.rows());
     
-    CompMat=CompMat*cdtoG*QuatConjMat((int)(2*F.rows()));
+    CompMat=CompMat*cdtoG*quatConjMat((int)(2*F.rows()));
     
     VectorXd torhs(8*F.rows()); torhs.setZero();
     torhs.head(8)<<ZeroQuat.transpose(), UnitQuat.transpose();
@@ -678,7 +680,7 @@ void MoebiusDeformation3D::Interpolate(double t, int NumIterations)
     for (int i=0;i<F.rows()-1;i++){
         RowVector4d c=InitialMobCoeffs.segment(8*i,4);
         RowVector4d d=InitialMobCoeffs.segment(8*i+4,4);
-        cdImagValue(i)=QMult1(c,QConj1(d))(0);
+        cdImagValue(i)=QMult(c,QConj(d))(0);
     }
     
     cout<<"Initial c,d imaginarity: "<<cdImagValue.lpNorm<Infinity>()<<endl;
@@ -713,17 +715,17 @@ void MoebiusDeformation3D::Interpolate(double t, int NumIterations)
             RowVector4d c1=IntegratedSolution.segment(4*(2*E2F(i,0)),4).transpose();
             RowVector4d d1=IntegratedSolution.segment(4*(2*E2F(i,0)+1),4).transpose();
             //cout<<"Imaginarity of c,d: "<<QMult(c1,QConj(d1))<<endl;
-            RowVector4d X1=QInv1(QMult1(c1,OrigVq.row(E2V(i,0)))+d1);
-            RowVector4d X2=QInv1(QMult1(c1,OrigVq.row(E2V(i,1)))+d1);
-            FaceEdgeVectors.row(i)=QMult1(QConj1(X2),QMult1(OrigVq.row(E2V(i,1))-OrigVq.row(E2V(i,0)),X1));
+            RowVector4d X1=QInv(QMult(c1,OrigVq.row(E2V(i,0)))+d1);
+            RowVector4d X2=QInv(QMult(c1,OrigVq.row(E2V(i,1)))+d1);
+            FaceEdgeVectors.row(i)=QMult(QConj(X2),QMult(OrigVq.row(E2V(i,1))-OrigVq.row(E2V(i,0)),X1));
         }
         if (E2F(i,1)!=-1){
             RowVector4d c2=IntegratedSolution.segment(4*(2*E2F(i,1)),4).transpose();
             RowVector4d d2=IntegratedSolution.segment(4*(2*E2F(i,1)+1),4).transpose();
             //cout<<"Imaginarity of c,d: "<<QMult(c2,QConj(d2))<<endl;
-            RowVector4d X1=QInv1(QMult1(c2,OrigVq.row(E2V(i,0)))+d2);
-            RowVector4d X2=QInv1(QMult1(c2,OrigVq.row(E2V(i,1)))+d2);
-            FaceEdgeVectors.row(i)+=QMult1(QConj1(X2),QMult1(OrigVq.row(E2V(i,1))-OrigVq.row(E2V(i,0)),X1));
+            RowVector4d X1=QInv(QMult(c2,OrigVq.row(E2V(i,0)))+d2);
+            RowVector4d X2=QInv(QMult(c2,OrigVq.row(E2V(i,1)))+d2);
+            FaceEdgeVectors.row(i)+=QMult(QConj(X2),QMult(OrigVq.row(E2V(i,1))-OrigVq.row(E2V(i,0)),X1));
 
         }
         
@@ -768,20 +770,20 @@ void MoebiusDeformation3D::Interpolate(double t, int NumIterations)
     //transforming reconstruction -> t=0
     RowVector4d a2zero, b2zero, c2zero, d2zero;
     GetMobiusCoeffs(a2zero, b2zero, c2zero, d2zero, cw, z);
-    //cout<<"det of 2zero transformation: "<<QMult1(QConj1(a2zero),d2zero)-QMult1(QConj1(b2zero),c2zero)<<endl;
+    //cout<<"det of 2zero transformation: "<<QMult(QConj(a2zero),d2zero)-QMult(QConj(b2zero),c2zero)<<endl;
     
     /*for (int i=0;i<d0.rows();i++){
-        RowVector4d Xi2zero=QInv1(QMult1(c2zero, CurrInterpVq.row(E2V(i,0)))+d2zero);
-        RowVector4d Xj2zero=QInv1(QMult1(c2zero, CurrInterpVq.row(E2V(i,1)))+d2zero);
+        RowVector4d Xi2zero=QInv(QMult(c2zero, CurrInterpVq.row(E2V(i,0)))+d2zero);
+        RowVector4d Xj2zero=QInv(QMult(c2zero, CurrInterpVq.row(E2V(i,1)))+d2zero);
         
-        FaceEdgeVectors.row(i)=QMult1(QMult1(QConj1(Xj2zero), FaceEdgeVectors.row(i)), Xi2zero);
+        FaceEdgeVectors.row(i)=QMult(QMult(QConj(Xj2zero), FaceEdgeVectors.row(i)), Xi2zero);
         
     }*/
     for (int i=0;i<OrigVq.rows();i++)
-        CurrInterpVq.row(i)=QMult1(QMult1(a2zero, CurrInterpVq.row(i))+b2zero,QInv1(QMult1(c2zero, CurrInterpVq.row(i))+d2zero));
+        CurrInterpVq.row(i)=QMult(QMult(a2zero, CurrInterpVq.row(i))+b2zero,QInv(QMult(c2zero, CurrInterpVq.row(i))+d2zero));
     
     //cout<<"FaceEdgeVectors: "<<FaceEdgeVectors<<endl;
-    cout<<"Imaginarity of 2zero c,d: "<<QMult1(c2zero,QConj1(d2zero))<<endl;
+    cout<<"Imaginarity of 2zero c,d: "<<QMult(c2zero,QConj(d2zero))<<endl;
     cout<<"c2zero, d2zero: "<<c2zero<<endl<<d2zero<<endl;
     
     /*d0Rhs=d0NoFirst.adjoint()*(RhsAdd+FaceEdgeVectors);
@@ -796,7 +798,7 @@ void MoebiusDeformation3D::Interpolate(double t, int NumIterations)
     RowVector4d ct, dt;
     
     dt=QExp(QLog(DeformGlobalMoebius.row(1))*t);
-    ct=t*QMult1(DeformGlobalMoebius.row(0),QConj1(QExp(QLog(DeformGlobalMoebius.row(1))*(1-t))));
+    ct=t*QMult(DeformGlobalMoebius.row(0),QConj(QExp(QLog(DeformGlobalMoebius.row(1))*(1-t))));
     
     
     FaceEdgeVectors=d0*CurrInterpVq;
@@ -806,9 +808,9 @@ void MoebiusDeformation3D::Interpolate(double t, int NumIterations)
     //testing entire mesh
     cout<<"LOCAL TESTING::::::"<<endl;
     for (int i=1;i<OrigVq.rows();i++){
-        RowVector4d Xi=QInv1(QMult1(ct,CurrInterpVq.row(0))+dt);
-        RowVector4d Xj=QInv1(QMult1(ct,CurrInterpVq.row(i))+dt);
-        RowVector4d TransVecq=QMult1(QMult1(QConj1(Xj), CurrInterpVq.row(i)-CurrInterpVq.row(0)), Xi);
+        RowVector4d Xi=QInv(QMult(ct,CurrInterpVq.row(0))+dt);
+        RowVector4d Xj=QInv(QMult(ct,CurrInterpVq.row(i))+dt);
+        RowVector4d TransVecq=QMult(QMult(QConj(Xj), CurrInterpVq.row(i)-CurrInterpVq.row(0)), Xi);
         cout<<"Xj*qij*Xi:"<<TransVecq<<endl;
         cout<<"Actual vectors: "<<DeformVq.row(i)-DeformVq.row(0)<<endl;
     }*/
@@ -816,16 +818,16 @@ void MoebiusDeformation3D::Interpolate(double t, int NumIterations)
     
     for (int i=0;i<d0.rows();i++){
         
-        RowVector4d Xit=QInv1(QMult1(ct, CurrInterpVq.row(E2V(i,0)))+dt);
-        RowVector4d Xjt=QInv1(QMult1(ct, CurrInterpVq.row(E2V(i,1)))+dt);
+        RowVector4d Xit=QInv(QMult(ct, CurrInterpVq.row(E2V(i,0)))+dt);
+        RowVector4d Xjt=QInv(QMult(ct, CurrInterpVq.row(E2V(i,1)))+dt);
         
-        FaceEdgeVectors.row(i)=QMult1(QMult1(QConj1(Xjt), FaceEdgeVectors.row(i)), Xit);
+        FaceEdgeVectors.row(i)=QMult(QMult(QConj(Xjt), FaceEdgeVectors.row(i)), Xit);
 
     }
     
     
     //cout<<"FaceEdgeVectors: "<<FaceEdgeVectors<<endl;
-    cout<<"Imaginarity of interpolated ct,dt: "<<QMult1(ct,QConj1(dt))<<endl;
+    cout<<"Imaginarity of interpolated ct,dt: "<<QMult(ct,QConj(dt))<<endl;
     cout<<"ct, dt: "<<ct<<endl<<dt<<endl;
     cout<<"DeformGlobalMoebius: "<<DeformGlobalMoebius<<endl;
     

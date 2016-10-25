@@ -11,7 +11,7 @@
 
 
 
-#include "QuaternionOps.h"
+#include <hedra/QuaternionOps.h>
 
 
 //both meshes have to be on the same unit sphere, 3 points interpolating, and the rest have the same radius
@@ -107,20 +107,20 @@ public:
         Vector4i bTriPoses; bTriPoses<<4,20,36,52;
         Vector4i cTriPoses; cTriPoses<<8,24,40,56;
         Vector4i dTriPoses; dTriPoses<<12,28,44,60;
-        GetQuatDerivativeIndices(GradRows, GradCols, ImagTriOffset+16, aTriPoses, ImagRowOffset+2, 0);
-        GetQuatDerivativeIndices(GradRows, GradCols, ImagTriOffset+16, bTriPoses, ImagRowOffset+2, 4);
-        GetQuatDerivativeIndices(GradRows, GradCols, ImagTriOffset+16, cTriPoses, ImagRowOffset+2, 8);
-        GetQuatDerivativeIndices(GradRows, GradCols, ImagTriOffset+16, dTriPoses, ImagRowOffset+2, 12);
+        hedra::quatDerivativeIndices(GradRows, GradCols, ImagTriOffset+16, aTriPoses, ImagRowOffset+2, 0);
+        hedra::quatDerivativeIndices(GradRows, GradCols, ImagTriOffset+16, bTriPoses, ImagRowOffset+2, 4);
+        hedra::quatDerivativeIndices(GradRows, GradCols, ImagTriOffset+16, cTriPoses, ImagRowOffset+2, 8);
+        hedra::quatDerivativeIndices(GradRows, GradCols, ImagTriOffset+16, dTriPoses, ImagRowOffset+2, 12);
         
         /****************************Positional Constraints******************************/
         PosTriOffset=ImagTriOffset+64+8+8;
         PosRowOffset=ImagRowOffset+6;
         for (int i=0;i<3;i++){
             //a*q+b-w*c*q-w*d
-            GetQuatDerivativeIndices(GradRows, GradCols, PosTriOffset+64*i, aTriPoses, PosRowOffset+4*i, 0);
-            GetQuatDerivativeIndices(GradRows, GradCols, PosTriOffset+64*i, bTriPoses, PosRowOffset+4*i, 4);
-            GetQuatDerivativeIndices(GradRows, GradCols, PosTriOffset+64*i, cTriPoses, PosRowOffset+4*i, 8);
-            GetQuatDerivativeIndices(GradRows, GradCols, PosTriOffset+64*i, dTriPoses, PosRowOffset+4*i, 12);
+            hedra::quatDerivativeIndices(GradRows, GradCols, PosTriOffset+64*i, aTriPoses, PosRowOffset+4*i, 0);
+            hedra::quatDerivativeIndices(GradRows, GradCols, PosTriOffset+64*i, bTriPoses, PosRowOffset+4*i, 4);
+            hedra::quatDerivativeIndices(GradRows, GradCols, PosTriOffset+64*i, cTriPoses, PosRowOffset+4*i, 8);
+            hedra::quatDerivativeIndices(GradRows, GradCols, PosTriOffset+64*i, dTriPoses, PosRowOffset+4*i, 12);
             
         }
         
@@ -170,10 +170,10 @@ public:
         Vector4i bTriPoses; bTriPoses<<4,20,36,52;
         Vector4i cTriPoses; cTriPoses<<8,24,40,56;
         Vector4i dTriPoses; dTriPoses<<12,28,44,60;
-        GetQuatDerivativeValues(GradValues, ImagTriOffset+16, aTriPoses,  UnitQuat, d, true, false);
-        GetQuatDerivativeValues(GradValues, ImagTriOffset+16, bTriPoses, -UnitQuat, c, true, false);
-        GetQuatDerivativeValues(GradValues, ImagTriOffset+16, cTriPoses, -QConj1(b), UnitQuat, false, false);
-        GetQuatDerivativeValues(GradValues, ImagTriOffset+16, dTriPoses, QConj1(a), UnitQuat, false, false);
+        hedra::quatDerivativeValues(GradValues, ImagTriOffset+16, aTriPoses,  UnitQuat, d, true, false);
+        hedra::quatDerivativeValues(GradValues, ImagTriOffset+16, bTriPoses, -UnitQuat, c, true, false);
+        hedra::quatDerivativeValues(GradValues, ImagTriOffset+16, cTriPoses, -QConj(b), UnitQuat, false, false);
+        hedra::quatDerivativeValues(GradValues, ImagTriOffset+16, dTriPoses, QConj(a), UnitQuat, false, false);
 
         
         /****************************Point Constraints******************************/
@@ -181,10 +181,10 @@ public:
             //a*q+b-w*c*q-w*d
             RowVector4d q=SourceVq.row(i);
             RowVector4d w=TargetVq.row(i);
-            GetQuatDerivativeValues(GradValues, PosTriOffset+64*i, aTriPoses, UnitQuat, q, false, false);
-            GetQuatDerivativeValues(GradValues, PosTriOffset+64*i, bTriPoses, UnitQuat, UnitQuat, false, false);
-            GetQuatDerivativeValues(GradValues, PosTriOffset+64*i, cTriPoses, -w,q,  false, false);
-            GetQuatDerivativeValues(GradValues, PosTriOffset+64*i, dTriPoses, -w, UnitQuat, false, false);
+            hedra::quatDerivativeValues(GradValues, PosTriOffset+64*i, aTriPoses, UnitQuat, q, false, false);
+            hedra::quatDerivativeValues(GradValues, PosTriOffset+64*i, bTriPoses, UnitQuat, UnitQuat, false, false);
+            hedra::quatDerivativeValues(GradValues, PosTriOffset+64*i, cTriPoses, -w,q,  false, false);
+            hedra::quatDerivativeValues(GradValues, PosTriOffset+64*i, dTriPoses, -w, UnitQuat, false, false);
         }
         
         /*****************************Unit Constraints******************************/
@@ -192,13 +192,13 @@ public:
 
         
         //(diff(|aq+b|^2)/da=2*a*sum(q.^2)-2*QMult(b,q)
-        RowVector4d diffa=2*a*SourceVq.row(3).squaredNorm()-2*QMult1(b,SourceVq.row(3));
+        RowVector4d diffa=2*a*SourceVq.row(3).squaredNorm()-2*QMult(b,SourceVq.row(3));
         //(diff(|aq+b|^2)/db=2*b+2*QMult(a,q)
-        RowVector4d diffb=2*b+2*QMult1(a,SourceVq.row(3));
+        RowVector4d diffb=2*b+2*QMult(a,SourceVq.row(3));
         //(diff(|cq+d|^2)/dc=2*c*sum(q.^2)-2*QMult(d,q)
-        RowVector4d diffc=2*c*SourceVq.row(3).squaredNorm()-2*QMult1(d,SourceVq.row(3));
+        RowVector4d diffc=2*c*SourceVq.row(3).squaredNorm()-2*QMult(d,SourceVq.row(3));
         //(diff(|cq+d|^2)/dd=2*d+2*QMult(c,q)
-        RowVector4d diffd=2*d+2*QMult1(c,SourceVq.row(3));
+        RowVector4d diffd=2*d+2*QMult(c,SourceVq.row(3));
         
         for (int j=0;j<4;j++){
             GradValues(UnitTriOffset+j)=diffa(j);
@@ -223,25 +223,25 @@ public:
         
         
         //a*conj(c) in imH
-        RowVector4d ac=QMult1(a,QConj1(c));
+        RowVector4d ac=QMult(a,QConj(c));
         ImagVec(0)=ac(0);
         
         //b*conj(d) in imH
-        RowVector4d bd=QMult1(b,QConj1(d));
+        RowVector4d bd=QMult(b,QConj(d));
         ImagVec(1)=bd(0);
         
         //conj(a)*d-conj(b)*c = UnitQuat
-        RowVector4d adcb=QMult1(QConj1(a), d)-QMult1(QConj1(b), c)-UnitQuat;
+        RowVector4d adcb=QMult(QConj(a), d)-QMult(QConj(b), c)-UnitQuat;
         ImagVec.segment(2,4)=adcb.transpose();
         
         
         for (int i=0;i<3;i++){
-            RowVector4d Res=QMult1(a,SourceVq.row(i))+b-QMult1(TargetVq.row(i),QMult1(c,SourceVq.row(i))+d);
+            RowVector4d Res=QMult(a,SourceVq.row(i))+b-QMult(TargetVq.row(i),QMult(c,SourceVq.row(i))+d);
             PointVec.segment(4*i,4)=Res.transpose();
         }
         
         //unit-preserving
-        UnitVec(0)=(QMult1(a,SourceVq.row(3))+b).squaredNorm()-(QMult1(c,SourceVq.row(3))+d).squaredNorm();
+        UnitVec(0)=(QMult(a,SourceVq.row(3))+b).squaredNorm()-(QMult(c,SourceVq.row(3))+d).squaredNorm();
         
         
         ConstVec<<ImagVec, PointVec, UnitVec;

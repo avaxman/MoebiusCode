@@ -12,7 +12,9 @@
 
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
-#include "DeformTraits.h"
+//#include "DeformTraits.h"
+#include <hedra/MoebiusCornerVarsTraits.h>
+#include <hedra/LMSolver.h>
 #include "PrescribeEdgeJumps.h"
 #include "QuadConstSolver.h"
 #include <hedra/EigenSolverWrapper.h>
@@ -80,8 +82,9 @@ public:
     VectorXd InterpConvErrors;
     
     //optimization operators
-    DeformTraitsCornerVars3D DeformTraits;
-    QuadConstSolver<DeformTraitsCornerVars3D> DeformSolver;
+    hedra::optimization::EigenSolverWrapper<Eigen::SimplicialLLT<Eigen::SparseMatrix<double> > > DeformLinearSolver;
+    hedra::optimization::MoebiusCornerVarsTraits DeformTraits;
+    hedra::optimization::LMSolver<hedra::optimization::EigenSolverWrapper<Eigen::SimplicialLLT<Eigen::SparseMatrix<double> > >,hedra::optimization::MoebiusCornerVarsTraits> DeformSolver;
     
     PrescribeEdgeJumps3D InterpTraits;
     QuadConstSolver<PrescribeEdgeJumps3D> InterpSolver;
