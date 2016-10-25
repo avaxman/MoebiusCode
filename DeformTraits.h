@@ -1,78 +1,93 @@
+// This file is part of libhedra, a library for polyhedral mesh processing
 //
-//  DeformTraits.h
-//  testigl
+// Copyright (C) 2016 Amir Vaxman <avaxman@gmail.com>
 //
-//  Created by Amir Vaxman on 30/09/14.
-//  Copyright (c) 2014 Amir Vaxman. All rights reserved.
-//
+// This Source Code Form is subject to the terms of the Mozilla Public License
+// v. 2.0. If a copy of the MPL was not distributed with this file, You can
+// obtain one at http://mozilla.org/MPL/2.0/.
+#ifndef HEDRA_MOEBIUS_EDGE_DEVIATION_2D_TRAITS_H
+#define HEDRA_MOEBIUS_EDGE_DEVIATION_2D_TRAITS_H
+#include <igl/igl_inline.h>
+#include <Eigen/Core>
+#include <string>
+#include <vector>
+#include <cstdio>
+#include <set>
 
-#ifndef testigl_DeformTraits_h
-#define testigl_DeformTraits_h
 
-#include <hedra/QuaternionOps.h>
+namespace hedra { namespace optimization {
+    
 
-typedef std::complex<double> Complex;
-
-class DeformTraitsEdgeDeviation2D{
+    //This traits class implements the "unonstraintTraits" concept, for the energy and constraints of the complex system of deformation in [Vaxman et. al 2015] (see Tutorial).
+    //TODO: fully integrate this as a constraint class
+    
+class Moebius2DEdgeDeviationTraits{
 public:
     
-    typedef std::complex<double> Complex;
-    Eigen::VectorXcd OrigVc;
-    Eigen::MatrixXi E2V, D, F;
-    Eigen::VectorXi ConstIndices;//, VarIndices;
-    Eigen::VectorXcd ComplexConstPoses;
-    Eigen::VectorXcd InitSolution;
     
-    double SmoothFactor;
-    double CloseFactor;
-    double ConstTolerance;
-    double RigidRatio;
+    //concept requirements
+    Eigen::VectorXi JRows, JCols;  //rows and column indices for the jacobian matrix
+    Eigen::VectorXd JVals;         //values for the jacobian matrix.
+    Eigen::VectorXd EVec;          //energy vector
+    int xSize;                  //size of the solution
+
+    typedef std::complex<double> Complex;
+    
+    Eigen::VectorXcd origVc;
+    Eigen::MatrixXi EV, D, F;
+    Eigen::VectorXi constIndices;//, VarIndices;
+    Eigen::VectorXcd complexConstPoses;
+    Eigen::VectorXcd initSolution;
+    Eigen::VectorXcd finalPositions;  //final vertex positions
+    Eigen::VectorXcd finalY;  //final vertex reciprocals
+    Eigen::VectorXcd finalE;  //final edge deivations
+    
+    double smoothFactor;
+    double closeFactor;
+    double constTolerance;
+    double rigidRatio;
     
     bool isExactMC;
     bool isExactIAP;
     
-    int SolutionSize;
     
-    Eigen::VectorXcd CurrSolution;  //the complex one
-    Eigen::VectorXcd CurrMobRecips;
-    Eigen::VectorXcd CurrLocations;
-    Eigen::VectorXcd CurrEdgeDeviations;
-    Eigen::VectorXcd CurrEdges;
+    //Complex variables
+    Eigen::VectorXcd currSolution;
+    Eigen::VectorXcd currMobRecips;
+    Eigen::VectorXcd currLocations;
+    Eigen::VectorXcd currEdgeDeviations;
+    Eigen::VectorXcd currEdges;
     Eigen::VectorXcd AMAPVec;
-    Eigen::VectorXcd MobVec;
-    Eigen::VectorXcd PosVec;
-    Eigen::VectorXcd RigidVec;
-    Eigen::VectorXcd CloseVec;
-    Eigen::VectorXcd DeviationVec;
+    Eigen::VectorXcd mobVec;
+    Eigen::VectorXcd posVec;
+    Eigen::VectorXcd rigidVec;
+    Eigen::VectorXcd closeVec;
+    Eigen::VectorXcd deviationVec;
+    
+    //real variables
     Eigen::VectorXd MCVec;
     Eigen::VectorXd IAPVec;
     Eigen::VectorXcd FCR;
     
     Eigen::SparseMatrix<Complex> d0;
     
-    Eigen::VectorXi ComplexGradRows;
-    Eigen::VectorXi ComplexGradCols;
-    Eigen::VectorXcd ComplexGradValues;
-    
-    
-    Eigen::VectorXi GradRows;
-    Eigen::VectorXi GradCols;
-    Eigen::VectorXd GradValues;
+    Eigen::VectorXi complexJRows;
+    Eigen::VectorXi complexJCols;
+    Eigen::VectorXcd complexJVals;
     
     //into the complex values
     int AMAPTriOffset, AMAPRowOffset;
-    int RigidTriOffset, RigidRowOffset;
-    int PosTriOffset, PosRowOffset;
-    int MobTriOffset, MobRowOffset;
-    int CloseTriOffset, CloseRowOffset;
-    int DeviationTriOffset, DeviationRowOffset;
-    int ComplexRowOffset, ComplexTriOffset;
+    int rigidTriOffset, RigidRowOffset;
+    int posTriOffset, PosRowOffset;
+    int mobTriOffset, mobRowOffset;
+    int closeTriOffset, closeRowOffset;
+    int deviationTriOffset, deviationRowOffset;
+    int complexRowOffset, complexTriOffset;
     
     //into the real values
     int MCTriOffset, MCRowOffset;
     int IAPTriOffset, IAPRowOffset;
     
-    Eigen::VectorXd TotalVec;
     Eigen::VectorXcd ConstVec;
     
 
@@ -81,7 +96,6 @@ public:
                     const Eigen::MatrixXi& inF,
                     const Eigen::MatrixXi& inE2V,
                     const Eigen::VectorXi& inConstIndices,
-                    const Eigen::VectorXcd& inFCR,
                     bool inisExactMC,
                     bool inisExactIAP,
                     double inRigidRatio){
@@ -93,6 +107,8 @@ public:
         ConstIndices=inConstIndices; //VarIndices=inVarIndices;
         OrigVc=inOrigVc;
         RigidRatio=inRigidRatio;
+        
+        
         FCR=inFCR;
         
         isExactMC=inisExactMC;
