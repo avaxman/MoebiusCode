@@ -13,6 +13,7 @@
 #include <hedra/EigenSolverWrapper.h>
 #include <hedra/MoebiusCornerVarsTraits.h>
 #include <hedra/QuaternionOps.h>
+#include <hedra/check_traits.h>
 #include <hedra/LMSolver.h>
 #include <igl/colon.h>
 #include <igl/setdiff.h>
@@ -257,7 +258,7 @@ void MoebiusDeformation3D::SetupMesh(const MatrixXd& InV, const MatrixXi& InD, c
         cout<<"Solver Failed to factorize! "<<endl;
     
     DeformTraits.init(OrigV, D, F, false);
-    DeformSolver.init(&DeformLinearSolver, &DeformTraits);
+    DeformSolver.init(&DeformLinearSolver, &DeformTraits, 150);
 }
 
 //only effectively works for quad meshes
@@ -281,50 +282,29 @@ void MoebiusDeformation3D::InitDeformation(const VectorXi& InConstIndices, bool 
     
     DeformTraits.init(OrigV, D, F, isExactMC, ConstIndices);
     DeformTraits.rigidRatio=RigidRatio;
-    DeformSolver.init(&DeformLinearSolver, &DeformTraits);
+    DeformSolver.init(&DeformLinearSolver, &DeformTraits, 150);
     
     //checking traits
-    /*DeformTraits.InitSolution=VectorXd::Random(4*NumCorners+3*OrigVq.rows());
-    DeformTraits.ConstPoses=MatrixXd::Random(ConstIndices.size(),3);
-    DeformTraits.SmoothFactor=100.0;
-    DeformTraits.PosFactor=10.0;
-    CheckTraits<DeformTraitsCornerVars3D>(DeformTraits, 4*NumCorners+3*OrigVq.rows());*/
+    /*DeformTraits.initSolution=VectorXd::Random(4*NumCorners+3*OrigVq.rows());
+    DeformTraits.constPoses=MatrixXd::Random(ConstIndices.size(),3);
+    DeformTraits.smoothFactor=100.0;
+    DeformTraits.posFactor=10.0;
+    hedra::optimization::check_traits<hedra::optimization::MoebiusCornerVarsTraits>(DeformTraits);*/
  
 }
-
 
 
 
 void MoebiusDeformation3D::UpdateDeformation(const MatrixXd& ConstPoses, int MaxIterations)
 {
     
-    /*Coords2Quat(ConstPoses, QuatConstPoses);
-    
-    VectorXd InitSolution(4*NumCorners+3*OrigVq.rows());
-
-    
-    for (int i=0;i<DeformX.rows();i++)
-        InitSolution.segment(4*i,4)=DeformX.row(i);
-        
-    
-    for (int i=0;i<DeformVq.rows();i++)
-        InitSolution.segment(4*NumCorners+3*i,3)=DeformV.row(i);
-    
-
-    DeformTraits.InitSolution=InitSolution;*/
     DeformTraits.constPoses=ConstPoses;
     DeformTraits.smoothFactor=100.0;
     DeformTraits.posFactor=10.0;
     DeformSolver.solve(true);
-    DeformV=DeformTraits.fullSolution;
+    DeformV=DeformTraits.finalPositions;
+    DeformX=DeformTraits.finalX;
   
-    /*for (int i=0;i<DeformX.rows();i++)
-        DeformX.row(i)=Solution.segment(4*i,4);
-        
-    for (int i=0;i<DeformVq.rows();i++)
-        DeformV.row(i)=Solution.segment(4*NumCorners+3*i,3);*/
-    
-
     Coords2Quat(DeformV, DeformVq);
     ComputeCR(DeformVq, D, F, QuadVertexIndices, DeformECR, DeformFCR);
     MatrixXd Centers(F.rows(),3); Centers.setZero();

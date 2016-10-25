@@ -934,6 +934,8 @@ int main(int argc, char *argv[])
     }else
         ReadGeneralObj(buffer, V, F);
     
+    IS_COMPLEX=(V.col(2).maxCoeff()-V.col(2).minCoeff()<10e-6);
+    
     (IS_COMPLEX ? md2.SetupMesh(V, D, F): md3.SetupMesh(V, D, F));
     
     if (IS_COMPLEX)
