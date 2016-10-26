@@ -6,11 +6,11 @@
 //  Copyright (c) 2014 Amir Vaxman. All rights reserved.
 //
 
-#ifndef testigl_PrescribeEdgeJumps_h
-#define testigl_PrescribeEdgeJumps_h
+#ifndef MoebiusCode_PrescribeEdgeJumps_h
+#define MoebiusCode_PrescribeEdgeJumps_h
 
 #include <Eigen/core>
-#include <hedra/QuaternionOps.h>
+#include <hedra/quaternionic_operations.h>
 #include <hedra/quaternionic_derivatives.h>
 
 

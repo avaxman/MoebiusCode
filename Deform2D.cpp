@@ -9,7 +9,10 @@
 #include "Deform2D.h"
 #include <hedra/polygonal_edge_topology.h>
 #include <hedra/Moebius2DEdgeDeviationTraits.h>
+#include <hedra/EigenSolverWrapper.h>
 #include <hedra/LMSolver.h>
+#include <hedra/triangulate_mesh.h>
+#include <hedra/check_traits.h>
 #include <igl/colon.h>
 #include <igl/setdiff.h>
 #include <igl/slice.h>
@@ -117,7 +120,8 @@ void MoebiusDeformation2D::SetupMesh(const MatrixXd& InV,  const MatrixXi& InD, 
 {
     F=InF;
     D=InD;
-    TriangulateGeneralMesh(D, F, tF, FromFace);
+    hedra::triangulate_mesh(D, F, tF, FromFace);
+    std::cout<<"Finished Triangulation"<<std::endl;
     OrigV=InV;
     DeformV=InV;
     InterpV=InV;
@@ -214,8 +218,14 @@ void MoebiusDeformation2D::SetupMesh(const MatrixXd& InV,  const MatrixXi& InD, 
     DeformFCR=OrigFCR;
     InterpFCR=OrigFCR;
     
-    DeformTraits.init(OrigVc, D, F, false);
+    std::cout<<"Finished regular init"<<std::endl;
+    
+    DeformTraits.init(OrigVc, D, F, E2V, false, false);
+    
+    std::cout<<"Finished DeformTraits.init"<<std::endl;
     DeformSolver.init(&DeformLinearSolver, &DeformTraits, 150);
+    
+    std::cout<<"Finished DeformSolver.init"<<std::endl;
     
 }
 
@@ -227,26 +237,26 @@ void MoebiusDeformation2D::InitDeformation(const VectorXi& InConstIndices, bool 
  
     ConstIndices=InConstIndices;
     
-    DeformTraits.init(OrigVc, D, F, isExactMC, ConstIndices);
+    DeformTraits.init(OrigVc, D, F, E2V, isExactMC, isExactIAP, ConstIndices);
     DeformTraits.rigidRatio=RigidRatio;
     DeformSolver.init(&DeformLinearSolver, &DeformTraits, 150);
     
     //checking traits
     if (isExactMC || isExactIAP){
-        DeformTraits.InitSolution=VectorXcd::Random(DeformX.rows()+DeformX.rows()+DeformE.rows());
-        DeformTraits.ComplexConstPoses=VectorXcd::Random(InConstIndices.size());
+        DeformTraits.initSolution=VectorXcd::Random(OrigVc.rows()+DeformY.rows()+DeformE.rows());
+        DeformTraits.complexConstPoses=VectorXcd::Random(InConstIndices.size());
         DeformTraits.smoothFactor=100.0;
         DeformTraits.posFactor=10.0;
-        hedra::optimization::check_traits<hedra::optimization::Moebius2DCEdgeDeviationTraits>(DeformTraits);
+        hedra::optimization::check_traits<hedra::optimization::Moebius2DEdgeDeviationTraits>(DeformTraits);
      }else{
-         DeformTraits.InitSolution=VectorXcd::Random(DeformX.rows()+DeformVc.rows());
-         DeformTraits.ComplexConstPoses=VectorXcd::Random(InConstIndices.size());
+         DeformTraits.initSolution=VectorXcd::Random(OrigVc.rows()+DeformY.rows());
+         DeformTraits.complexConstPoses=VectorXcd::Random(InConstIndices.size());
          DeformTraits.smoothFactor=100.0;
          DeformTraits.posFactor=10.0;
-         hedra::optimization::check_traits<hedra::optimization::Moebius2DCEdgeDeviationTraits>(DeformTraits);
+         hedra::optimization::check_traits<hedra::optimization::Moebius2DEdgeDeviationTraits>(DeformTraits);
      }
     
-    DeformSolver.Initialize(&DeformTraits);
+    DeformSolver.init(&DeformLinearSolver, &DeformTraits, 150);
     
 }
 
@@ -257,11 +267,11 @@ void MoebiusDeformation2D::UpdateDeformation(const MatrixXd& ConstPoses, int Max
 {
     
     Coords2Complex(ConstPoses, ComplexConstPoses);
-    DeformTraits.ComplexConstPoses=ComplexConstPoses;
+    DeformTraits.complexConstPoses=ComplexConstPoses;
     DeformTraits.smoothFactor=100.0;
     DeformTraits.posFactor=10.0;
     DeformSolver.solve(true);
-    DeformV=DeformTraits.finalPositions;
+    DeformVc=DeformTraits.finalPositions;
     DeformY=DeformTraits.finalY;
     DeformE=DeformTraits.finalE;
 

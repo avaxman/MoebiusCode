@@ -16,6 +16,7 @@
 #include <hedra/LMSolver.h>
 #include "PrescribeEdgeJumps.h"
 #include <hedra/EigenSolverWrapper.h>
+#include "QuadConstSolver.h"
 
 using namespace Eigen;
 using namespace std;

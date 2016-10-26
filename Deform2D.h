@@ -6,14 +6,16 @@
 //  Copyright (c) 2014 Amir Vaxman. All rights reserved.
 //
 
-#ifndef testigl_Deform2D_h
-#define testigl_Deform2D_h
+#ifndef MoebiusCode_Deform2D_h
+#define MoebiusCode_Deform2D_h
 
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 #include <hedra/Moebius2DEdgeDeviationTraits.h>
+#include <hedra/EigenSolverWrapper.h>
 #include <hedra/LMSolver.h>
 #include "PrescribeEdgeJumps.h"
+#include "QuadConstSolver.h"
 
 using namespace Eigen;
 using namespace std;

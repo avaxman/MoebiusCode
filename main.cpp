@@ -11,7 +11,7 @@
 #include <igl/sortrows.h>
 #include <igl/readOBJ.h>
 #include <igl/writeOBJ.h>
-#include <hedra/QuaternionOps.h>
+#include <hedra/quaternionic_operations.h>
 #include <hedra/polygonal_read_OFF.h>
 #include <hedra/triangulate_mesh.h>
 #include <hedra/polygonal_edge_topology.h>
@@ -936,13 +936,15 @@ int main(int argc, char *argv[])
     
     IS_COMPLEX=(V.col(2).maxCoeff()-V.col(2).minCoeff()<10e-6);
     
-    (IS_COMPLEX ? md2.SetupMesh(V, D, F): md3.SetupMesh(V, D, F));
-    
     if (IS_COMPLEX)
         cout<<"***************Complex Mesh**************"<<endl;
     else
         cout<<"***************Quaternionic Mesh*********"<<endl;
+
     
+    (IS_COMPLEX ? md2.SetupMesh(V, D, F): md3.SetupMesh(V, D, F));
+    
+    cout<<"finished SetUpMesh"<<endl;
     
     SetupColormap();
     

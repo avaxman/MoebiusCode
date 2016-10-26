@@ -6,12 +6,12 @@
 //  Copyright (c) 2014 Amir Vaxman. All rights reserved.
 //
 
-#ifndef testigl_GetMobius3DCoeffs_h
-#define testigl_GetMobius3DCoeffs_h
+#ifndef MoebiusCode_GetMobius3DCoeffs_h
+#define MoebiusCode_GetMobius3DCoeffs_h
 
 
 
-#include <hedra/QuaternionOps.h>
+#include <hedra/quaternionic_operations.h>
 
 
 //both meshes have to be on the same unit sphere, 3 points interpolating, and the rest have the same radius

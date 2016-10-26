@@ -11,10 +11,11 @@
 #include <hedra/triangulate_mesh.h>
 #include <hedra/polygonal_edge_topology.h>
 #include <hedra/EigenSolverWrapper.h>
-#include <hedra/MoebiusCornerVarsTraits.h>
-#include <hedra/QuaternionOps.h>
+#include <hedra/Moebius3DCornerVarsTraits.h>
+#include <hedra/quaternionic_operations.h>
 #include <hedra/check_traits.h>
 #include <hedra/LMSolver.h>
+#include <hedra/triangulate_mesh.h>
 #include <igl/colon.h>
 #include <igl/setdiff.h>
 #include <igl/slice.h>
@@ -87,7 +88,8 @@ void MoebiusDeformation3D::SetupMesh(const MatrixXd& InV, const MatrixXi& InD, c
 {
     F=InF;
     D=InD;
-    TriangulateGeneralMesh(D, F, tF, FromFace);
+    hedra::triangulate_mesh(D, F, tF, FromFace);
+
     OrigV=InV;
     DeformV=InV;
     InterpV=InV;
