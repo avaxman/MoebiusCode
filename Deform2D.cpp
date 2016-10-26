@@ -8,17 +8,17 @@
 
 #include "Deform2D.h"
 #include <hedra/polygonal_edge_topology.h>
-#include <hedra/QuaternionOps.h>
+#include <hedra/Moebius2DEdgeDeviationTraits.h>
+#include <hedra/LMSolver.h>
 #include <igl/colon.h>
 #include <igl/setdiff.h>
 #include <igl/slice.h>
 #include <igl/slice_into.h>
 #include <igl/speye.h>
-#include "QuadConstSolver.h"
-#include "DeformTraits.h"
 #include "PrescribeEdgeJumps.h"
 #include "ExtraFunctions.h"
-
+#include <set>
+#include <iostream>
 
 #define PRINT_OUT 0
 
@@ -152,7 +152,7 @@ void MoebiusDeformation2D::SetupMesh(const MatrixXd& InV,  const MatrixXi& InD, 
     
     
     
-    DeformX=VectorXcd::Ones(DeformVc.rows());
+    DeformY=VectorXcd::Ones(DeformVc.rows());
     DeformE=VectorXcd::Ones(ExtE2V.rows());
     
     //setting up the full differential operators
@@ -214,6 +214,9 @@ void MoebiusDeformation2D::SetupMesh(const MatrixXd& InV,  const MatrixXi& InD, 
     DeformFCR=OrigFCR;
     InterpFCR=OrigFCR;
     
+    DeformTraits.init(OrigVc, D, F, false);
+    DeformSolver.init(&DeformLinearSolver, &DeformTraits, 150);
+    
 }
 
 
@@ -221,24 +224,29 @@ void MoebiusDeformation2D::SetupMesh(const MatrixXd& InV,  const MatrixXi& InD, 
 
 void MoebiusDeformation2D::InitDeformation(const VectorXi& InConstIndices, bool isExactMC, bool isExactIAP, double RigidRatio)
 {
+ 
     ConstIndices=InConstIndices;
     
-    DeformTraits.Initialize(OrigVc, D, F, ExtE2V,ConstIndices,OrigFCR, isExactMC, isExactIAP, RigidRatio);
+    DeformTraits.init(OrigVc, D, F, isExactMC, ConstIndices);
+    DeformTraits.rigidRatio=RigidRatio;
+    DeformSolver.init(&DeformLinearSolver, &DeformTraits, 150);
     
     //checking traits
-    /*if (isExactMC || isExactIAP){
-     DeformTraits.InitSolution=VectorXcd::Random(DeformX.rows()+DeformX.rows()+DeformE.rows());
-     DeformTraits.ComplexConstPoses=VectorXcd::Random(InConstIndices.size());
-     CheckTraits<DeformTraitsEdgeDeviation2D>(DeformTraits, 2*(DeformX.rows()+DeformVc.rows()+DeformE.rows()));
+    if (isExactMC || isExactIAP){
+        DeformTraits.InitSolution=VectorXcd::Random(DeformX.rows()+DeformX.rows()+DeformE.rows());
+        DeformTraits.ComplexConstPoses=VectorXcd::Random(InConstIndices.size());
+        DeformTraits.smoothFactor=100.0;
+        DeformTraits.posFactor=10.0;
+        hedra::optimization::check_traits<hedra::optimization::Moebius2DCEdgeDeviationTraits>(DeformTraits);
      }else{
-     DeformTraits.InitSolution=VectorXcd::Random(DeformX.rows()+DeformVc.rows());
-     DeformTraits.ComplexConstPoses=VectorXcd::Random(InConstIndices.size());
-     CheckTraits<DeformTraitsEdgeDeviation2D>(DeformTraits, 2*(DeformX.rows()+DeformVc.size()));
-     }*/
-    
+         DeformTraits.InitSolution=VectorXcd::Random(DeformX.rows()+DeformVc.rows());
+         DeformTraits.ComplexConstPoses=VectorXcd::Random(InConstIndices.size());
+         DeformTraits.smoothFactor=100.0;
+         DeformTraits.posFactor=10.0;
+         hedra::optimization::check_traits<hedra::optimization::Moebius2DCEdgeDeviationTraits>(DeformTraits);
+     }
     
     DeformSolver.Initialize(&DeformTraits);
-    
     
 }
 
@@ -247,62 +255,20 @@ void MoebiusDeformation2D::InitDeformation(const VectorXi& InConstIndices, bool 
 
 void MoebiusDeformation2D::UpdateDeformation(const MatrixXd& ConstPoses, int MaxIterations,bool isExactMC,bool isExactIAP)
 {
+    
     Coords2Complex(ConstPoses, ComplexConstPoses);
     DeformTraits.ComplexConstPoses=ComplexConstPoses;
-    
-    VectorXcd InitSolution;
-    if (isExactMC || isExactIAP){
-        InitSolution.resize(DeformX.rows()+DeformX.rows()+DeformE.rows());
-        InitSolution<<DeformX, DeformVc,DeformE;
-    } else {
-        InitSolution.resize(DeformX.rows()+DeformVc.size());
-        InitSolution<<DeformX, DeformVc;
-        
-    }
-    
-    VectorXd InitSolutionReal(2*InitSolution.size());
-    InitSolutionReal<<InitSolution.real(), InitSolution.imag();
-    
-    
-    cout<<"Solving for Deformation"<<endl;
-    
-    DeformTraits.InitSolution=InitSolution;
-    DeformTraits.ComplexConstPoses=ComplexConstPoses;
-    DeformTraits.SmoothFactor=10.0;
-    VectorXd RealSolution=DeformSolver.Solve(InitSolutionReal, 1.0, MaxIterations);
-    
-    VectorXcd Solution(InitSolution.size());
-    Solution.array().real()=RealSolution.head(RealSolution.size()/2);
-    Solution.array().imag()=RealSolution.tail(RealSolution.size()/2);
-    
-    for (int i=0;i<OrigVc.rows();i++)
-        DeformVc(i)=Solution(OrigVc.rows()+i);
-    
-    for (int i=0;i<DeformX.rows();i++)
-        DeformX(i)=Solution(i);
-    
-    
-    //if (isExactMC || isExactIAP){
-    //for (int i=0;i<DeformE.rows();i++)
-    //   DeformE(i)=Solution(OrigVc.rows()+OrigVc.rows()+i);
-    
-    
-    //} else {
-    for (int i=0;i<DeformE.rows();i++){
-        DeformE(i)=DeformX(ExtE2V(i,1))*(OrigVc(ExtE2V(i,1))-OrigVc(ExtE2V(i,0)))*DeformX(ExtE2V(i,0));
-        DeformE(i)/=(DeformVc(ExtE2V(i,1))-DeformVc(ExtE2V(i,0)));
-        
-    }
-    //}
-    
-    //cout<<"Abs(DeformE):"<<abs(DeformE.array())<<endl;
-    
+    DeformTraits.smoothFactor=100.0;
+    DeformTraits.posFactor=10.0;
+    DeformSolver.solve(true);
+    DeformV=DeformTraits.finalPositions;
+    DeformY=DeformTraits.finalY;
+    DeformE=DeformTraits.finalE;
+
     Complex2Coords(DeformVc, DeformV);
     ComputeCR(DeformVc, D, F,QuadVertexIndices, DeformECR, DeformFCR);
     
     EdgeDeformV<<DeformV, GetCenters(DeformV, D, F);
-    
-    DeformConvErrors=DeformSolver.ConvErrors;
     
 }
 

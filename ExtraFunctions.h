@@ -26,8 +26,6 @@ void GetComplexMobiusCoeffs(Complex& a, Complex& b, Complex& c, Complex& d, cons
 
 RowVector4d Rot2Quat(Matrix3d& R);
 
-//for visualization only
-void TriangulateGeneralMesh(const MatrixXi& D, const MatrixXi& F, MatrixXi& tF, VectorXi& FromFace);
 
 MatrixXd GetCenters(const MatrixXd& V, const MatrixXi& D, const MatrixXi& F);
 

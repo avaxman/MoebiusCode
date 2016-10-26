@@ -6,17 +6,15 @@
 //  Copyright (c) 2014 Amir Vaxman. All rights reserved.
 //
 
-#ifndef testigl_Deform3D_h
-#define testigl_Deform3D_h
+#ifndef MoebiusCode_Deform3D_h
+#define MoebiusCode_Deform3D_h
 
 
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
-//#include "DeformTraits.h"
-#include <hedra/MoebiusCornerVarsTraits.h>
+#include <hedra/Moebius3DCornerVarsTraits.h>
 #include <hedra/LMSolver.h>
 #include "PrescribeEdgeJumps.h"
-#include "QuadConstSolver.h"
 #include <hedra/EigenSolverWrapper.h>
 
 using namespace Eigen;
@@ -83,8 +81,8 @@ public:
     
     //optimization operators
     hedra::optimization::EigenSolverWrapper<Eigen::SimplicialLLT<Eigen::SparseMatrix<double> > > DeformLinearSolver;
-    hedra::optimization::MoebiusCornerVarsTraits DeformTraits;
-    hedra::optimization::LMSolver<hedra::optimization::EigenSolverWrapper<Eigen::SimplicialLLT<Eigen::SparseMatrix<double> > >,hedra::optimization::MoebiusCornerVarsTraits> DeformSolver;
+    hedra::optimization::Moebius3DCornerVarsTraits DeformTraits;
+    hedra::optimization::LMSolver<hedra::optimization::EigenSolverWrapper<Eigen::SimplicialLLT<Eigen::SparseMatrix<double> > >,hedra::optimization::Moebius3DCornerVarsTraits> DeformSolver;
     
     PrescribeEdgeJumps3D InterpTraits;
     QuadConstSolver<PrescribeEdgeJumps3D> InterpSolver;

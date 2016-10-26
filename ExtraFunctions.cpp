@@ -140,35 +140,6 @@ RowVector4d Rot2Quat(Matrix3d& R)
     return Result;
 }
 
-void TriangulateGeneralMesh(const MatrixXi& D, const MatrixXi& F, MatrixXi& tF, VectorXi& FromFace)
-{
-    vector<Vector3i> NewTriangles;
-    vector<int> RawFromFace;
-    
-    
-    //cout<<"F :"<<F<<endl;
-    
-    for (int i=0;i<D.rows();i++){
-        //triangulating the face greedily
-        for (int CurrIndex=1;CurrIndex<D(i)-1;CurrIndex++){
-            Vector3i NewFace;
-            NewFace<<F(i,0),F(i,CurrIndex),F(i,CurrIndex+1);
-            RawFromFace.push_back(i);
-            NewTriangles.push_back(NewFace);
-        }
-    }
-    
-    tF.resize(NewTriangles.size(),3);
-    FromFace.resize(RawFromFace.size());
-    for (int i=0;i<NewTriangles.size();i++){
-        tF.row(i)=NewTriangles[i];
-        FromFace(i)=RawFromFace[i];
-    }
-    
-    //cout<<"tF :"<<tF<<endl;
-    //cout<<"FromFace :"<<FromFace<<endl;
-    
-}
 
 MatrixXd GetCenters(const MatrixXd& V, const MatrixXi& D, const MatrixXi& F)
 {

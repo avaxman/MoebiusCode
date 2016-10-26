@@ -22,10 +22,7 @@
 #include <igl/speye.h>
 #include <igl/colon.h>
 #include "ExtraFunctions.h"
-//#include "QuaternionOps.h"
-//#include "DeformTraits.h"
 #include "PrescribeEdgeJumps.h"
-//#include "QuadConstSolver.h"
 #include "UnitSphereMoebiusTraits.h"
 #include <set>
 

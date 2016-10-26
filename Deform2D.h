@@ -11,8 +11,8 @@
 
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
-#include "QuadConstSolver.h"
-#include "DeformTraits.h"
+#include <hedra/Moebius2DEdgeDeviationTraits.h>
+#include <hedra/LMSolver.h>
 #include "PrescribeEdgeJumps.h"
 
 using namespace Eigen;
@@ -24,7 +24,6 @@ typedef std::complex<double> Complex;
 void Complex2Coords(const VectorXcd& CV, MatrixXd& V);
 void Coords2Complex(const MatrixXd& V, VectorXcd& CV);
 void ComputeCR(const VectorXcd& Vc, const MatrixXi& D, const MatrixXi& F, const MatrixXi& QuadVertexIndices, VectorXcd& ECR, VectorXcd& FCR);
-
 
 
 class MoebiusDeformation2D{
@@ -60,7 +59,7 @@ public:
     
     
     //Edge deviation method variables
-    VectorXcd DeformX;  //candidate reciprocals of the Mobius transformation.
+    VectorXcd DeformY;  //candidate reciprocals of the Mobius transformation.
     VectorXcd DeformE;  //errors of vertex reciprocals vs. actual transformed vertices
    
        
@@ -86,9 +85,12 @@ public:
     VectorXd InterpConvErrors;
     
     //optimization operators
-    DeformTraitsEdgeDeviation2D DeformTraits;
-    QuadConstSolver<DeformTraitsEdgeDeviation2D> DeformSolver;
-    
+    //optimization operators
+    hedra::optimization::EigenSolverWrapper<Eigen::SimplicialLLT<Eigen::SparseMatrix<double> > > DeformLinearSolver;
+    hedra::optimization::Moebius2DEdgeDeviationTraits DeformTraits;
+    hedra::optimization::LMSolver<hedra::optimization::EigenSolverWrapper<Eigen::SimplicialLLT<Eigen::SparseMatrix<double> > >,hedra::optimization::Moebius2DEdgeDeviationTraits> DeformSolver;
+
+
     PrescribeEdgeJumps2D InterpTraits;
     QuadConstSolver<PrescribeEdgeJumps2D> InterpSolver;
     
