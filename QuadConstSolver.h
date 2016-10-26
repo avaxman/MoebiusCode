@@ -6,8 +6,8 @@
 //  Copyright (c) 2014 Amir Vaxman. All rights reserved.
 //
 
-#ifndef testigl_QuadConstSolver_h
-#define testigl_QuadConstSolver_h
+#ifndef MoebiusCode_QuadConstSolver_h
+#define MoebiusCode_QuadConstSolver_h
 
 #include <Eigen/Dense>
 #include <Eigen/Sparse>

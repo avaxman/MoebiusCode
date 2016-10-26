@@ -6,8 +6,8 @@
 //  Copyright (c) 2014 Amir Vaxman. All rights reserved.
 //
 
-#ifndef testigl_InterpolateTraits_h
-#define testigl_InterpolateTraits_h
+#ifndef MoebiusCode_InterpolateTraits_h
+#define MoebiusCode_InterpolateTraits_h
 
 #include "AuxSparse.h"
 #include "MobiusFromShapes.h"

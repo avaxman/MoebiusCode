@@ -96,7 +96,7 @@ void ComputeCR(const VectorXcd& Vc, const MatrixXi& D, const MatrixXi& F, const 
         ECR(i)=((Zj-Zi)*(Zl-Zk))/((Zi-Zl)*(Zk-Zj));
     }
     
-    int NumFCR=F.col(0).sum()-3*D.rows();
+    int NumFCR=D.sum()-3*D.rows();
     FCR.resize(NumFCR); FCR.setZero();
     int CurrFCR=0;
     for (int i=0;i<D.rows();i++){
@@ -121,7 +121,6 @@ void MoebiusDeformation2D::SetupMesh(const MatrixXd& InV,  const MatrixXi& InD, 
     F=InF;
     D=InD;
     hedra::triangulate_mesh(D, F, tF, FromFace);
-    std::cout<<"Finished Triangulation"<<std::endl;
     OrigV=InV;
     DeformV=InV;
     InterpV=InV;
@@ -192,8 +191,8 @@ void MoebiusDeformation2D::SetupMesh(const MatrixXd& InV,  const MatrixXi& InD, 
         int g=E2F(InnerEdges(i),1);
         int vi=E2V(InnerEdges(i),0);
         int vk=E2V(InnerEdges(i),1);
-        int vj=F(g,1+(E2Fi(InnerEdges(i),1)+2)%(F(g,0)));
-        int vl=F(f,1+(E2Fi(InnerEdges(i),0)+2)%(F(f,0)));
+        int vj=F(g,(E2Fi(InnerEdges(i),1)+2)%D(g));
+        int vl=F(f,(E2Fi(InnerEdges(i),0)+2)%D(f));
         int vf=OrigV.rows()+E2F(InnerEdges(i),0);
         int vg=OrigV.rows()+E2F(InnerEdges(i),1);
         
@@ -218,14 +217,9 @@ void MoebiusDeformation2D::SetupMesh(const MatrixXd& InV,  const MatrixXi& InD, 
     DeformFCR=OrigFCR;
     InterpFCR=OrigFCR;
     
-    std::cout<<"Finished regular init"<<std::endl;
-    
-    DeformTraits.init(OrigVc, D, F, E2V, false, false);
-    
-    std::cout<<"Finished DeformTraits.init"<<std::endl;
+    DeformTraits.init(OrigVc, D, F, ExtE2V, false, false);
     DeformSolver.init(&DeformLinearSolver, &DeformTraits, 150);
-    
-    std::cout<<"Finished DeformSolver.init"<<std::endl;
+
     
 }
 
@@ -237,12 +231,12 @@ void MoebiusDeformation2D::InitDeformation(const VectorXi& InConstIndices, bool 
  
     ConstIndices=InConstIndices;
     
-    DeformTraits.init(OrigVc, D, F, E2V, isExactMC, isExactIAP, ConstIndices);
+    DeformTraits.init(OrigVc, D, F, ExtE2V, isExactMC, isExactIAP, ConstIndices);
     DeformTraits.rigidRatio=RigidRatio;
     DeformSolver.init(&DeformLinearSolver, &DeformTraits, 150);
     
     //checking traits
-    if (isExactMC || isExactIAP){
+    /*if (isExactMC || isExactIAP){
         DeformTraits.initSolution=VectorXcd::Random(OrigVc.rows()+DeformY.rows()+DeformE.rows());
         DeformTraits.complexConstPoses=VectorXcd::Random(InConstIndices.size());
         DeformTraits.smoothFactor=100.0;
@@ -256,7 +250,7 @@ void MoebiusDeformation2D::InitDeformation(const VectorXi& InConstIndices, bool 
          hedra::optimization::check_traits<hedra::optimization::Moebius2DEdgeDeviationTraits>(DeformTraits);
      }
     
-    DeformSolver.init(&DeformLinearSolver, &DeformTraits, 150);
+    DeformSolver.init(&DeformLinearSolver, &DeformTraits, 150);*/
     
 }
 
