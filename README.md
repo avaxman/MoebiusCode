@@ -30,4 +30,4 @@ You can use `cmake-gui` in windows to create a visual studio project. The depend
 
 The demo offers the following possibilities:
 
-[Demo Screen](MoebiusCodeDemoScreen.png "Demo Screen")
+[Demo Screen](MoebiusCodeDemoScreen.png)
