@@ -28,6 +28,17 @@ make
 
 You can use `cmake-gui` in windows to create a visual studio project. The dependencies are already recusrisvely downloaded and built.
 
-The demo offers the following possibilities:
+Upon running, the demo will ask to load a mesh. It automatically infers if the mesh is 2D (if the $z$ coordinate is negligible) of 3D, and then would run the respective algorithms. The demo offers the following possibilities:
 
-[Demo Screen](MoebiusCodeDemoScreen.png)
+![Demo Screen](MoebiusCodeDemoScreen.png)
+
+The editing options are:
+
+| Editing Options                     | Description                                                                         |
+| :----------------------- | :---------------------------------------------------------------------------------- |
+| `Original`            | Shows the original mesh for comparison. It cannot be edited in this mode.                                     |
+| `Deformation`               | Shows the currently deforming mesh. The handles will be spheres, where the green sphere is the currently edited one.|
+| `Interpolation`              | Shows the interpolated mesh at the current time frame.|
+
+
+
