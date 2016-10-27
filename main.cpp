@@ -736,7 +736,7 @@ void SetInterpolationFactorCallback(double value)
     InterpScalar=value;
     cout<<"Current Interpolation Factor is "<<InterpScalar<<endl;
     if (RecomputeInterpolation){
-        (IS_COMPLEX ? md2.SetupInterpolation(isExactMC, isExactIAP) : md3.SetupInterpolation(isExactMC, isExactIAP, true));
+        (IS_COMPLEX ? md2.SetupInterpolation(isExactMC) : md3.SetupInterpolation(isExactMC, isExactIAP, true));
         RecomputeInterpolation=false;
     }
     (IS_COMPLEX ? md2.Interpolate(InterpScalar, 500) : md3.Interpolate(InterpScalar, 500));

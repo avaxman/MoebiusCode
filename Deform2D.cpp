@@ -10,6 +10,7 @@
 #include <hedra/polygonal_edge_topology.h>
 #include <hedra/Moebius2DEdgeDeviationTraits.h>
 #include <hedra/EigenSolverWrapper.h>
+#include <hedra/Moebius2DInterpolationTraits.h>
 #include <hedra/LMSolver.h>
 #include <hedra/triangulate_mesh.h>
 #include <hedra/check_traits.h>
@@ -18,7 +19,6 @@
 #include <igl/slice.h>
 #include <igl/slice_into.h>
 #include <igl/speye.h>
-#include "PrescribeEdgeJumps.h"
 #include "ExtraFunctions.h"
 #include <set>
 #include <iostream>
@@ -204,10 +204,6 @@ void MoebiusDeformation2D::SetupMesh(const MatrixXd& InV,  const MatrixXi& InD, 
     //cout<<"QuadVertexIndices: "<<QuadVertexIndices<<endl;
     
     
-    FaceCornerPairs.resize(InnerEdges.size(),4);
-    for (int i=0;i<InnerEdges.size();i++)
-        FaceCornerPairs.row(i)<<E2F.row(InnerEdges(i)), E2V(InnerEdges(i),1), E2V(InnerEdges(i),0);
-    
     //cout<<"FaceCornerPairs: "<<FaceCornerPairs<<endl;
     
     
@@ -278,19 +274,19 @@ void MoebiusDeformation2D::UpdateDeformation(const MatrixXd& ConstPoses, int Max
 
 
 //must be called before interpolation when the deformed mesh has changed.
-void MoebiusDeformation2D::SetupInterpolation(bool isExactMC, bool isExactIAP)
+void MoebiusDeformation2D::SetupInterpolation(bool isExactMC)
 {
     
-    InterpTraits.Initialize(OrigVc,  D, F, FaceCornerPairs,isExactMC, isExactIAP);
+    InterpTraits.init(OrigVc,  D, F,E2V, E2F, InnerEdges, isExactMC);
     
     //checking traits
-    //InterpTraits.InitSolution=VectorXcd::Random(2*F.rows());
-    //InterpTraits.SmoothFactor=10.0;
-    //InterpTraits.PresJumps=VectorXcd::Random(FaceCornerPairs.rows());
-    //CheckTraits<PrescribeEdgeJumps2D>(InterpTraits, 4*F.rows());
+    /*InterpTraits.initSolution=VectorXcd::Random(2*F.rows());
+    InterpTraits.smoothFactor=10.0;
+    InterpTraits.presJumps=VectorXcd::Random(InterpTraits.faceCornerIndices.rows());
+    hedra::optimization::check_traits<hedra::optimization::Moebius2DInterpolationTraits>(InterpTraits);*/
     
     
-    InterpSolver.Initialize(&InterpTraits);
+    InterpSolver.init(&InterpLinearSolver, &InterpTraits);
     
     //computing the global Moebius transformations between three points
     VectorXd Distances(OrigVc.rows());
@@ -345,25 +341,25 @@ void MoebiusDeformation2D::Interpolate(double t, int NumIterations)
     
     VectorXcd PresJumps=exp(log(DeformECR.cwiseQuotient(OrigECR).array())*t/2.0);   //this assumes that the difference is small enough for logarithem to always be in the principal branch;
     cout<<"PresJumps"<<PresJumps<<endl;
-    InterpTraits.PresJumps=PresJumps;
+    InterpTraits.presJumps=PresJumps;
     
     
     //creating matrix with current PresJump Values
-    vector<Triplet<Complex> > JumpMatTris(8*FaceCornerPairs.size());
-    for (int i=0;i<FaceCornerPairs.rows();i++){
-        JumpMatTris[8*i]=Triplet<Complex>(2*i,2*FaceCornerPairs(i,0), OrigVc(FaceCornerPairs(i,2))*PresJumps(i));
-        JumpMatTris[8*i+1]=Triplet<Complex>(2*i,2*FaceCornerPairs(i,0)+1, PresJumps(i));
-        JumpMatTris[8*i+2]=Triplet<Complex>(2*i,2*FaceCornerPairs(i,1), -OrigVc(FaceCornerPairs(i,2)));
-        JumpMatTris[8*i+3]=Triplet<Complex>(2*i,2*FaceCornerPairs(i,1)+1, -1.0);
+    vector<Triplet<Complex> > JumpMatTris(8*InterpTraits.faceCornerIndices.size());
+    for (int i=0;i<InterpTraits.faceCornerIndices.rows();i++){
+        JumpMatTris[8*i]=Triplet<Complex>(2*i,2*InterpTraits.faceCornerIndices(i,0), OrigVc(InterpTraits.faceCornerIndices(i,2))*PresJumps(i));
+        JumpMatTris[8*i+1]=Triplet<Complex>(2*i,2*InterpTraits.faceCornerIndices(i,0)+1, PresJumps(i));
+        JumpMatTris[8*i+2]=Triplet<Complex>(2*i,2*InterpTraits.faceCornerIndices(i,1), -OrigVc(InterpTraits.faceCornerIndices(i,2)));
+        JumpMatTris[8*i+3]=Triplet<Complex>(2*i,2*InterpTraits.faceCornerIndices(i,1)+1, -1.0);
         
-        JumpMatTris[8*i+4]=Triplet<Complex>(2*i+1,2*FaceCornerPairs(i,0), OrigVc(FaceCornerPairs(i,3)));
-        JumpMatTris[8*i+5]=Triplet<Complex>(2*i+1,2*FaceCornerPairs(i,0)+1, 1.0);
-        JumpMatTris[8*i+6]=Triplet<Complex>(2*i+1,2*FaceCornerPairs(i,1), -OrigVc(FaceCornerPairs(i,3))*PresJumps(i));
-        JumpMatTris[8*i+7]=Triplet<Complex>(2*i+1,2*FaceCornerPairs(i,1)+1, -PresJumps(i));
+        JumpMatTris[8*i+4]=Triplet<Complex>(2*i+1,2*InterpTraits.faceCornerIndices(i,0), OrigVc(InterpTraits.faceCornerIndices(i,3)));
+        JumpMatTris[8*i+5]=Triplet<Complex>(2*i+1,2*InterpTraits.faceCornerIndices(i,0)+1, 1.0);
+        JumpMatTris[8*i+6]=Triplet<Complex>(2*i+1,2*InterpTraits.faceCornerIndices(i,1), -OrigVc(InterpTraits.faceCornerIndices(i,3))*PresJumps(i));
+        JumpMatTris[8*i+7]=Triplet<Complex>(2*i+1,2*InterpTraits.faceCornerIndices(i,1)+1, -PresJumps(i));
     }
     
     //can be in advance.
-    SparseMatrix<Complex> JumpMat(2*FaceCornerPairs.rows(),2*F.rows());
+    SparseMatrix<Complex> JumpMat(2*InterpTraits.faceCornerIndices.rows(),2*F.rows());
     JumpMat.reserve(JumpMatTris.size());
     JumpMat.setFromTriplets(JumpMatTris.begin(), JumpMatTris.end());
     
@@ -375,7 +371,7 @@ void MoebiusDeformation2D::Interpolate(double t, int NumIterations)
     for (int i=0;i<VarIndices.size();i++)
         VarIndices(i)=i+2;
     
-    SparseMatrix<Complex> JumpMatVar(2*FaceCornerPairs.rows(),2*(F.rows()-1));
+    SparseMatrix<Complex> JumpMatVar(2*InterpTraits.faceCornerIndices.rows(),2*(F.rows()-1));
     igl::slice(JumpMat, VarIndices, 2, JumpMatVar);
     
     VectorXcd InitialMobCoeffs=SolveComplexSytem(JumpMatVar.adjoint()*JumpMatVar, JumpMatVar.adjoint()*Rhs);
@@ -385,20 +381,12 @@ void MoebiusDeformation2D::Interpolate(double t, int NumIterations)
     VectorXcd InitSolution(2*F.rows());
     InitSolution<<0.0, 1.0, InitialMobCoeffs;
     
-    VectorXd InitSolutionReal(2*InitSolution.size());
-    InitSolutionReal<<InitSolution.real(), InitSolution.imag();
+    InterpTraits.initSolution=InitSolution;
+    InterpTraits.smoothFactor=10.0;
+    InterpTraits.presJumps=PresJumps;
+    InterpSolver.solve(true);
     
-    InterpTraits.InitSolution=InitSolution;
-    InterpTraits.SmoothFactor=10.0;
-    InterpTraits.PresJumps=PresJumps;
-    VectorXd IntegratedSolutionReal=InterpSolver.Solve(InitSolutionReal, 1.0, NumIterations);
-    
-    VectorXcd IntegratedSolution(IntegratedSolutionReal.size()/2);
-    IntegratedSolution.real()=IntegratedSolutionReal.head(IntegratedSolutionReal.size()/2);
-    IntegratedSolution.imag()=IntegratedSolutionReal.tail(IntegratedSolutionReal.size()/2);
-    
-    InterpConvErrors=InterpSolver.ConvErrors;
-    
+    VectorXcd IntegratedSolution=InterpTraits.finalcd;
     
     //reconstructing the current interpolated mesh
     VectorXcd FaceEdgeVectors(E2F.rows());
@@ -457,7 +445,6 @@ void MoebiusDeformation2D::Interpolate(double t, int NumIterations)
     TargetGlobalPoints(1)=TargetGlobalPoints(0)+TargetGlobalVectors(0);
     TargetGlobalPoints(2)=TargetGlobalPoints(0)+TargetGlobalVectors(1);
     
-    
     Complex a,b,c,d;
     GetComplexMobiusCoeffs(a, b, c, d, ReconPoints,TargetGlobalPoints);
     
@@ -469,6 +456,5 @@ void MoebiusDeformation2D::Interpolate(double t, int NumIterations)
  
     EdgeInterpV<<InterpV, GetCenters(InterpV, D, F);
     
-    InterpConvErrors=InterpSolver.ConvErrors;
 }
 

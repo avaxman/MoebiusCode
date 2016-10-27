@@ -12,10 +12,11 @@
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 #include <hedra/Moebius2DEdgeDeviationTraits.h>
+#include <hedra/Moebius2DInterpolationTraits.h>
 #include <hedra/EigenSolverWrapper.h>
 #include <hedra/LMSolver.h>
-#include "PrescribeEdgeJumps.h"
-#include "QuadConstSolver.h"
+//#include "PrescribeEdgeJumps.h"
+//#include "QuadConstSolver.h"
 
 using namespace Eigen;
 using namespace std;
@@ -46,8 +47,6 @@ public:
     MatrixXi ExtE2V;  //extended with diagonals
     MatrixXd F2ESigns;
     VectorXi InnerEdges;  //indices of edges which are non-boundary
-    
-    MatrixXi FaceCornerPairs;   //faces (f,g, i,k) and vertices around every edge for compatibility and smoothness, like in the paper
     
     //Raw 3D positions
     MatrixXd OrigV;    //original vertex positions
@@ -91,10 +90,11 @@ public:
     hedra::optimization::EigenSolverWrapper<Eigen::SimplicialLLT<Eigen::SparseMatrix<double> > > DeformLinearSolver;
     hedra::optimization::Moebius2DEdgeDeviationTraits DeformTraits;
     hedra::optimization::LMSolver<hedra::optimization::EigenSolverWrapper<Eigen::SimplicialLLT<Eigen::SparseMatrix<double> > >,hedra::optimization::Moebius2DEdgeDeviationTraits> DeformSolver;
+    
+    hedra::optimization::EigenSolverWrapper<Eigen::SimplicialLLT<Eigen::SparseMatrix<double> > > InterpLinearSolver;
+    hedra::optimization::Moebius2DInterpolationTraits InterpTraits;
+    hedra::optimization::LMSolver<hedra::optimization::EigenSolverWrapper<Eigen::SimplicialLLT<Eigen::SparseMatrix<double> > >,hedra::optimization::Moebius2DInterpolationTraits> InterpSolver;
 
-
-    PrescribeEdgeJumps2D InterpTraits;
-    QuadConstSolver<PrescribeEdgeJumps2D> InterpSolver;
     
     Vector3i DeformGlobalVertices;    //three points going to others
     Vector2cd DeformGlobalMoebius;  //the global mobius (c,d)
@@ -104,7 +104,7 @@ public:
     void InitDeformation(const VectorXi& InConstIndices, bool isExactMC, bool isExactIAP, double RigidRatio);
     void UpdateDeformation(const MatrixXd& ConstPoses, int MaxIterations,bool isExactMC,bool isExactIAP);
     
-    void SetupInterpolation(bool isExactMC, bool isExactIAP);
+    void SetupInterpolation(bool isExactMC);
     void Interpolate(double t, int NumIterations);
     
 };
