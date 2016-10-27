@@ -160,11 +160,11 @@ void MoebiusDeformation2D::SetupMesh(const MatrixXd& InV,  const MatrixXi& InD, 
     
     //setting up the full differential operators
     std::vector<Triplet<Complex> > d0tris;
-    d0.resize(ExtE2V.rows(),OrigV.rows());
-    for (int i=0;i<ExtE2V.rows();i++)
+    d0.resize(E2V.rows(),OrigV.rows());
+    for (int i=0;i<E2V.rows();i++)
     {
-        d0tris.push_back(Triplet<Complex>(i,ExtE2V(i,0),-1.0));
-        d0tris.push_back(Triplet<Complex>(i,ExtE2V(i,1),1.0));
+        d0tris.push_back(Triplet<Complex>(i,E2V(i,0),-1.0));
+        d0tris.push_back(Triplet<Complex>(i,E2V(i,1),1.0));
     }
     d0.setFromTriplets(d0tris.begin(), d0tris.end());
     
@@ -344,6 +344,7 @@ void MoebiusDeformation2D::Interpolate(double t, int NumIterations)
     cout<<"+++++++++++++++++++++++++++++++++++++++++++++"<<endl;
     
     VectorXcd PresJumps=exp(log(DeformECR.cwiseQuotient(OrigECR).array())*t/2.0);   //this assumes that the difference is small enough for logarithem to always be in the principal branch;
+    cout<<"PresJumps"<<PresJumps<<endl;
     InterpTraits.PresJumps=PresJumps;
     
     
@@ -442,8 +443,6 @@ void MoebiusDeformation2D::Interpolate(double t, int NumIterations)
     
     Vector3cd OrigPoints;
     OrigPoints<<OrigVc(DeformGlobalVertices(0)),OrigVc(DeformGlobalVertices(1)),OrigVc(DeformGlobalVertices(2));
-    
-    
     
     Vector2cd InterpGlobalMoebius; InterpGlobalMoebius<<t*DeformGlobalMoebius(0), pow(DeformGlobalMoebius(1),t);
     //cout<<"InterpGlobalMoebius: "<<InterpGlobalMoebius<<endl;

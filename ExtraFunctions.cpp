@@ -83,7 +83,7 @@ VectorXcd SolveComplexSytem(const SparseMatrix<Complex>& A, const VectorXcd& b)
     
     rb<<b.real(), b.imag();
     
-    MatrixXd RawSolution=hedra::optimization::EigenSingleSolveWrapper<Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > >(rA, rb);
+    MatrixXd RawSolution=hedra::optimization::EigenSingleSolveWrapper<Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > >(rA, rb, false);
     
     int ComplexSize=A.cols();
     
