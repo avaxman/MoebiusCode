@@ -86,6 +86,7 @@ The core of the algorithm is currently part of [libhedra](https://github.com/ava
 2. Interpolation by consequent key pressing (to see progress).
 3. Using the nicer [libhedra](https://github.com/avaxman/libhedra)-based drawing of handles and polyhedral edge lines.
 4. using [libhedra](https://github.com/avaxman/libhedra) measures for concyclity etc. It might then change the output slightly (the averaging on polygonal faces is a bit different).
+5. Currently the linear solver is Cholesky in Eigen, which is on the slow side. A wrapper for PARDISO will be added as an option to get better performance.
 
 Please complain about bugs, or ask any relevant question by [Amir Vaxman] (a.vaxman@uu.nl) (or open an issue in the repository). If you use this software for comparison, please cite the original paper:
 
