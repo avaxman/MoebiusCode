@@ -74,19 +74,20 @@ You can navigate between xisting handles by the keys `N,M`. The current handle c
 
 ##Other operations
 
-Save the current deformed and interpolated meshes by pressing `X`. Press `P` to update the current deformation (in case you deleted the hanndle, changed a parameter, etc.).
+Save the current deformed and interpolated meshes (into polygonal OFF files )by pressing `X`. Press `P` to update the current deformation (in case you deleted the hanndle, changed a parameter, etc.). press `V` and `B` to add and subtract, respectively, the interpolation time step $t$, and compute the interpolation accordingly.
 
 ##Implementation
 
-The core of the algorithm is currently part of [libhedra](https://github.com/avaxman/libhedra), as traits classes to its Levenberg-Marquadt solver. The entire algorithm will soon be incorporated into the library, but this demo will remain as showcase nonetheless.
+The core of the algorithm is currently part of [libhedra](https://github.com/avaxman/libhedra), as traits classes to its Levenberg-Marquadt solver. Details about the optimization are very similar to those in the paper, but with some changes that will be detailed soon. Meanwhile, the code in the traits `Moebius2DEdgeDeviationTraits.h`, `Moebius3DCornerVarsTraits.h`, and `Moebius2DInterpolationTraits.h` in [libhedra](https://github.com/avaxman/libhedra) reveals them.
+
+The entire algorithm will soon be incorporated into the library, but this demo will remain as showcase nonetheless.
 
 ###TODO List:
 
 1. 3D Interpolation: currently solving a few bugs to make that happen.
-2. Interpolation by consequent key pressing (to see progress).
-3. Using the nicer [libhedra](https://github.com/avaxman/libhedra)-based drawing of handles and polyhedral edge lines.
-4. using [libhedra](https://github.com/avaxman/libhedra) measures for concyclity etc. It might then change the output slightly (the averaging on polygonal faces is a bit different).
-5. Currently the linear solver is Cholesky in Eigen, which is on the slow side. A wrapper for PARDISO will be added as an option to get better performance.
+2. Using the nicer [libhedra](https://github.com/avaxman/libhedra)-based drawing of handles and polyhedral edge lines.
+3. using [libhedra](https://github.com/avaxman/libhedra) measures for concyclity etc. It might then change the output slightly (the averaging on polygonal faces is a bit different).
+4. Currently the linear solver is Cholesky in Eigen, which is on the slow side. A wrapper for PARDISO will be added as an option to get better performance.
 
 Please complain about bugs, or ask any relevant question by [Amir Vaxman] (a.vaxman@uu.nl) (or open an issue in the repository). If you use this software for comparison, please cite the original paper:
 
