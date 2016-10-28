@@ -14,6 +14,7 @@
 #include <Eigen/Sparse>
 #include <hedra/Moebius3DCornerVarsTraits.h>
 #include <hedra/LMSolver.h>
+#include <hedra/GNSolver.h>
 #include "PrescribeEdgeJumps.h"
 #include <hedra/EigenSolverWrapper.h>
 #include "QuadConstSolver.h"

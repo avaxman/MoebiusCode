@@ -76,7 +76,7 @@ double uFreq, vFreq;
 
 bool IS_COMPLEX;  //if the mesh if complex or quaternionic
 
-double RigidRatio=0.5;       ///inversion control ratio
+double RigidRatio;       ///inversion control ratio
 double MCSensitivity=0.01;  //ratio of abs(cr)
 double IAPSensitivity=1.0;  //degrees difference
 double QCSensitivity=0.5;   //abs(max_sing/min_sing)
@@ -411,7 +411,7 @@ void UpdateCurrentView()
 
 void SaveGeneralOff(const std::string str, const MatrixXd& V, const MatrixXi& D, const MatrixXi& F)
 {
-    /*ofstream FileName;
+    ofstream FileName;
     FileName.open(str);
     
     FileName<<"OFF"<<endl<<V.rows()<<" "<<F.rows()<<" 0"<<endl;
@@ -419,7 +419,7 @@ void SaveGeneralOff(const std::string str, const MatrixXd& V, const MatrixXi& D,
     MatrixXi FD(D.rows(), D.cols()+F.cols());
     FD<<D, F;
     FileName<<FD<<endl;
-    FileName.close();*/
+    FileName.close();
     
     //igl::writePolygonalOFF(str, V, D, F);
     
@@ -499,84 +499,6 @@ void ReadGeneralOff(const std::string str, MatrixXd& V, VectorXi& D, MatrixXi& F
 
 
 
-bool key_down(igl::viewer::Viewer& viewer, unsigned char key, int modifiers)
-{
-    switch(key)
-    {
-        case 'X':{
-            char buffer[1024];
-            get_save_file_path(buffer);
-            if (EditingMode==INTERPOLATION)
-                SaveGeneralOff(buffer, (IS_COMPLEX ? md2.InterpV : md3.InterpV), (IS_COMPLEX ? md2.D : md3.D), (IS_COMPLEX ? md2.F : md3.F));
-            else
-                SaveGeneralOff(buffer, (IS_COMPLEX ? md2.DeformV : md3.DeformV), (IS_COMPLEX ? md2.D : md3.D), (IS_COMPLEX ? md2.F : md3.F));
-            
-            break;
-        }
-            
-        case 'P':{
-            MatrixXd ConstPosesMat(ConstPoses.size(),3);
-            for (int i=0;i<ConstPoses.size();i++)
-                ConstPosesMat.row(i)=ConstPoses[i];
-            
-            VectorXi EConstIndices(ConstIndices.size());
-            for (int i=0;i<ConstIndices.size();i++)
-                EConstIndices(i)=ConstIndices[i];
-            
-            
-            (IS_COMPLEX ? md2.InitDeformation(EConstIndices, isExactMC, isExactIAP, RigidRatio): md3.InitDeformation(EConstIndices, isExactMC, isExactIAP, RigidRatio));
-            
-            (IS_COMPLEX ? md2.UpdateDeformation(ConstPosesMat,1000, isExactMC, isExactIAP) : md3.UpdateDeformation(ConstPosesMat,1000));
-            CurrActiveHandle=(int)(ConstIndices.size()-1);
-            UpdateCurrentView();
-            break;
-        }
-
-        case 'V':{
-            UV.array()*=1.05;
-            cout<<"Pressed V:"<<endl;
-            UpdateCurrentView();
-            break;
-        }
-            
-        case 'B':{
-            UV.array()/=1.05;
-            UpdateCurrentView();
-            break;
-        }
-            
-        case 'N':
-            CurrActiveHandle=(CurrActiveHandle+1)%ConstIndices.size();
-            UpdateCurrentView();
-            break;
-            
-        case 'M':
-            CurrActiveHandle=(CurrActiveHandle+ConstIndices.size()-1)%ConstIndices.size();
-            UpdateCurrentView();
-            break;
-            
-        case 'D':  //delete current handle
-            std::vector<int> TempConstIndices;
-            std::vector<Vector3d> TempConstPoses;
-            for (int i=0;i<CurrActiveHandle;i++){
-                TempConstIndices.push_back(ConstIndices[i]);
-                TempConstPoses.push_back(ConstPoses[i]);
-            }
-            for (int i=CurrActiveHandle+1;i<ConstIndices.size();i++){
-                TempConstIndices.push_back(ConstIndices[i]);
-                TempConstPoses.push_back(ConstPoses[i]);
-            }
-            ConstIndices=TempConstIndices;
-            ConstPoses=TempConstPoses;
-            if (ConstIndices.empty())
-                CurrActiveHandle=-1;
-            else
-                CurrActiveHandle=0;
-            UpdateCurrentView();
-            break;
-    }
-    return true;
-}
 
 bool mouse_up(igl::viewer::Viewer& viewer, int button, int modifier)
 {
@@ -918,6 +840,84 @@ void SetupColormap(){
     ColorMap/=255.0;
 }
 
+bool key_down(igl::viewer::Viewer& viewer, unsigned char key, int modifiers)
+{
+    switch(key)
+    {
+        case 'X':{
+            char buffer[1024];
+            get_save_file_path(buffer);
+            if (EditingMode==INTERPOLATION)
+                SaveGeneralOff(buffer, (IS_COMPLEX ? md2.InterpV : md3.InterpV), (IS_COMPLEX ? md2.D : md3.D), (IS_COMPLEX ? md2.F : md3.F));
+            else
+                SaveGeneralOff(buffer, (IS_COMPLEX ? md2.DeformV : md3.DeformV), (IS_COMPLEX ? md2.D : md3.D), (IS_COMPLEX ? md2.F : md3.F));
+            
+            break;
+        }
+            
+        case 'P':{
+            MatrixXd ConstPosesMat(ConstPoses.size(),3);
+            for (int i=0;i<ConstPoses.size();i++)
+                ConstPosesMat.row(i)=ConstPoses[i];
+            
+            VectorXi EConstIndices(ConstIndices.size());
+            for (int i=0;i<ConstIndices.size();i++)
+                EConstIndices(i)=ConstIndices[i];
+            
+            
+            (IS_COMPLEX ? md2.InitDeformation(EConstIndices, isExactMC, isExactIAP, RigidRatio): md3.InitDeformation(EConstIndices, isExactMC, isExactIAP, RigidRatio));
+            
+            (IS_COMPLEX ? md2.UpdateDeformation(ConstPosesMat,1000, isExactMC, isExactIAP) : md3.UpdateDeformation(ConstPosesMat,1000));
+            CurrActiveHandle=(int)(ConstIndices.size()-1);
+            UpdateCurrentView();
+            break;
+        }
+            
+        case 'V':{
+            SetInterpolationFactorCallback(InterpScalar+0.05);
+            break;
+        }
+            
+            
+        case 'B':{
+            SetInterpolationFactorCallback(InterpScalar-0.05);
+            break;
+        }
+            
+        case 'N':
+            CurrActiveHandle=(CurrActiveHandle+1)%ConstIndices.size();
+            UpdateCurrentView();
+            break;
+            
+        case 'M':
+            CurrActiveHandle=(CurrActiveHandle+ConstIndices.size()-1)%ConstIndices.size();
+            UpdateCurrentView();
+            break;
+            
+        case 'D':  //delete current handle
+            std::vector<int> TempConstIndices;
+            std::vector<Vector3d> TempConstPoses;
+            for (int i=0;i<CurrActiveHandle;i++){
+                TempConstIndices.push_back(ConstIndices[i]);
+                TempConstPoses.push_back(ConstPoses[i]);
+            }
+            for (int i=CurrActiveHandle+1;i<ConstIndices.size();i++){
+                TempConstIndices.push_back(ConstIndices[i]);
+                TempConstPoses.push_back(ConstPoses[i]);
+            }
+            ConstIndices=TempConstIndices;
+            ConstPoses=TempConstPoses;
+            if (ConstIndices.empty())
+                CurrActiveHandle=-1;
+            else
+                CurrActiveHandle=0;
+            UpdateCurrentView();
+            break;
+    }
+    return true;
+}
+
+
 
 
 
@@ -935,6 +935,7 @@ int main(int argc, char *argv[])
         ReadGeneralObj(buffer, V, F);
     
     IS_COMPLEX=(V.col(2).maxCoeff()-V.col(2).minCoeff()<10e-6);
+    RigidRatio=(IS_COMPLEX ? 0.1 : 0.5);
     
     if (IS_COMPLEX)
         cout<<"***************Complex Mesh**************"<<endl;

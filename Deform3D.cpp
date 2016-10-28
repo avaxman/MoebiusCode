@@ -231,7 +231,7 @@ void MoebiusDeformation3D::SetupMesh(const MatrixXd& InV, const MatrixXi& InD, c
     int NumMembers=0;
     for (int k=0; k<d0td0.outerSize(); ++k)
         for (SparseMatrix<double>::InnerIterator it(d0td0,k); it; ++it)
-            if (it.row()<=it.col())
+            //if (it.row()<=it.col())
                 NumMembers++;
          
     I.resize(NumMembers);
@@ -240,11 +240,11 @@ void MoebiusDeformation3D::SetupMesh(const MatrixXd& InV, const MatrixXi& InD, c
     int Counter=0;
     for (int k=0; k<d0td0.outerSize(); ++k){
         for (SparseMatrix<double>::InnerIterator it(d0td0,k); it; ++it){
-            if (it.row()<=it.col()){
+            //if (it.row()<=it.col()){
                 I(Counter)=it.row();
                 J(Counter)=it.col();
                 S(Counter++)=it.value();
-            }
+            //}
         }
     }
     
@@ -298,8 +298,8 @@ void MoebiusDeformation3D::UpdateDeformation(const MatrixXd& ConstPoses, int Max
 {
     
     DeformTraits.constPoses=ConstPoses;
-    DeformTraits.smoothFactor=100.0;
-    DeformTraits.posFactor=10.0;
+    DeformTraits.smoothFactor=10.0;
+    DeformTraits.posFactor=1.0;
     DeformSolver.solve(true);
     DeformV=DeformTraits.finalPositions;
     DeformX=DeformTraits.finalX;
@@ -548,9 +548,9 @@ void MoebiusDeformation3D::SetupInterpolation(bool isExactMC, bool isExactIAP, b
         for (int i=0;i<InnerEdges.rows();i++){
             int f1=E2F(InnerEdges(i),0);
             int f2=E2F(InnerEdges(i),1);
-            int f1i=(E2Fi(InnerEdges(i),0)+1)%F(f1,0);
+            int f1i=(E2Fi(InnerEdges(i),0)+1)%D(f1);
             int f1j=E2Fi(InnerEdges(i),0);
-            int f2j=(E2Fi(InnerEdges(i),1)+1)%F(f2,0);
+            int f2j=(E2Fi(InnerEdges(i),1)+1)%D(f2);
             int f2i=E2Fi(InnerEdges(i),1);
             RowVector4d zij=OrigVq.row(E2V(InnerEdges(i),1))-OrigVq.row(E2V(InnerEdges(i),0));
             
