@@ -63,7 +63,7 @@ void ComputeCR(const MatrixXd& Vq, const MatrixXi& D, const MatrixXi& F, const M
         
     }
     
-    int NumFCR=F.col(0).sum()-3*D.rows();
+    int NumFCR=D.sum()-3*D.rows();
     FCR.resize(NumFCR,4); FCR.setZero();
     int CurrFCR=0;
     for (int i=0;i<D.rows();i++){
