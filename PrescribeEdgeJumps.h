@@ -9,7 +9,7 @@
 #ifndef MoebiusCode_PrescribeEdgeJumps_h
 #define MoebiusCode_PrescribeEdgeJumps_h
 
-#include <Eigen/core>
+#include <Eigen/Core>
 #include <hedra/quaternionic_operations.h>
 #include <hedra/quaternionic_derivatives.h>
 
