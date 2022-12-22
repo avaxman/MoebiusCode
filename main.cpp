@@ -1,11 +1,13 @@
 #include <igl/unproject_onto_mesh.h>
 #include <igl/opengl/glfw/Viewer.h>
 #include <igl/readDMAT.h>
+#include <igl/jet.h>
+#include <igl/per_vertex_normals.h>
 #include <hedra/edge_mesh.h>
 #include <hedra/polygonal_read_OFF.h>
-#include <hedra/polygonal_write_OFF.h>
 #include <hedra/triangulate_mesh.h>
 #include <hedra/polygonal_edge_topology.h>
+#include <hedra/affine_maps_deform.h>
 #include <hedra/point_spheres.h>
 #include <hedra/concyclity.h>
 #include <hedra/dc_error.h>
@@ -39,7 +41,6 @@ Eigen::VectorXi innerEdges;
 Eigen::Vector3d spans;
 bool isExactMC=false;
 bool isExactIAP=false;
-std::string outputFileName;
 
 bool editing=false;
 bool choosingHandleMode=false;
@@ -123,23 +124,21 @@ bool UpdateCurrentView()
                                 Eigen::MatrixXi& T,
                                 Eigen::MatrixXd& C)*/
 
-    if (bc.rows()!=0)
+    if (bc.rows()!=0) {
         hedra::point_spheres(bc, sphereRadius, sphereGreens, 10, bigV, bigT, bigTC);
-    viewer.data().show_lines = false;
-    Eigen::MatrixXd OrigEdgeColors(EV.rows(), 3);
-    OrigEdgeColors.col(0) = Eigen::VectorXd::Constant(EV.rows(), 0.0);
-    OrigEdgeColors.col(1) = Eigen::VectorXd::Constant(EV.rows(), 0.0);
-    OrigEdgeColors.col(2) = Eigen::VectorXd::Constant(EV.rows(), 0.0);
-    viewer.data(0).clear();
-    viewer.data(0).set_mesh(currV, currT);
-    viewer.data(0).set_colors(TC);
-    viewer.data(0).compute_normals();
-    viewer.data(0).set_edges(currV, EV, OrigEdgeColors);
-    viewer.data(0).show_lines = false;
-    viewer.data(1).clear();
-    viewer.data(1).set_mesh(bigV, bigT);
-    viewer.data(1).show_lines=false;
-    viewer.data(0).set_colors(bigTC);
+
+        viewer.data().show_lines = false;
+        Eigen::MatrixXd OrigEdgeColors(EV.rows(), 3);
+        OrigEdgeColors.col(0) = Eigen::VectorXd::Constant(EV.rows(), 0.0);
+        OrigEdgeColors.col(1) = Eigen::VectorXd::Constant(EV.rows(), 0.0);
+        OrigEdgeColors.col(2) = Eigen::VectorXd::Constant(EV.rows(), 0.0);
+
+        viewer.data().clear();
+        viewer.data().set_mesh(bigV, bigT);
+        viewer.data().set_colors(bigTC);
+        viewer.data().compute_normals();
+        viewer.data().set_edges(bigV, EV, OrigEdgeColors);
+    }
     return true;
 }
 
@@ -291,17 +290,6 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier
             break;
         }
 
-        case '6': {
-            isExactMC = !isExactMC;
-            cout<<"Computing with Exact CETM (in next deformation): "<<isExactMC<<endl;
-            break;
-        }
-
-        case 'W':{
-            hedra::polygonal_write_OFF(outputFileName, currV, D, F);
-            break;
-        }
-
     }
 
     return false;
@@ -310,21 +298,15 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier
 
 int main(int argc, char *argv[])
 {
-    if (argc < 3){
-        cout<<"1st argument should be complete file path and 2nd argument for output file!"<<endl;
-        return 0;
-    }
+
     cout<<"press 1+right button to select new handles"<<endl;
     cout<<"press 2 button to toggle between different quality measures"<<endl;
     cout<<"press 3 to toggle between original and deformed mesh"<<endl;
     cout<<"press 4-5 to change the sensitivity of the quality measurement"<<endl;
-    cout<<"press 6 to toggle exact CETM"<<endl;
-    cout<<"Press W to save the output file"<<endl;
     cout<<"press the right button and drag the current handle for deformation"<<endl;
 
     // Load a mesh in OFF format
-    outputFileName = std::string(argv[2]);
-    hedra::polygonal_read_OFF(std::string(argv[1]), origV, D, F);
+    hedra::polygonal_read_OFF("/Users/avaxman/MoebiusCode/external/libhedra/tutorial/shared/bar2d.off", origV, D, F);
     hedra::polygonal_edge_topology(D, F, EV, FE, EF,EFi,FEs,innerEdges);
     hedra::triangulate_mesh(D, F, polyT, polyTF);
     hedra::complex_moebius_setup(origV,D,F,polyTF,EV,EF,EFi,FE,FEs, innerEdges, cmdata);
@@ -335,9 +317,6 @@ int main(int argc, char *argv[])
     edgeDeformV=edgeOrigV;
     spans=currV.colwise().maxCoeff()-currV.colwise().minCoeff();
 
-    //handles mesh
-    viewer.append_mesh();
-
 
     viewer.callback_mouse_down = &mouse_down;
     viewer.callback_mouse_move = &mouse_move;
@@ -347,4 +326,6 @@ int main(int argc, char *argv[])
     viewer.core().background_color<<0.75,0.75,0.75,1.0;
     UpdateCurrentView();
     viewer.launch();
+
+
 }
