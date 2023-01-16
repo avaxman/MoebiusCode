@@ -14,6 +14,7 @@
 #include <hedra/concyclity.h>
 #include <hedra/scalar2RGB.h>
 #include <hedra/complex_moebius_deform.h>
+#include <hedra/quat_moebius_deform.h>
 #include <algorithm>
 
 using namespace Eigen;
@@ -39,12 +40,14 @@ Eigen::VectorXi innerEdges;
 Eigen::Vector3d spans;
 bool isExactMC=false;
 bool isExactIAP=false;
+bool isQuat = false;
 std::string outputFileName;
 
 bool editing=false;
 bool choosingHandleMode=false;
 double currWinZ;
 hedra::ComplexMoebiusData cmdata;
+hedra::QuatMoebiusData qmdata;
 
 double rigidityFactor=0.1;      //inversion control ratio
 double DCSensitivity=0.01;     //ratio of abs(cr)
@@ -165,7 +168,10 @@ bool mouse_move(igl::opengl::glfw::Viewer& viewer, int mouse_x, int mouse_y)
     for (int i=0;i<handles.size();i++)
         bc.row(i)=handlePoses[i].transpose();
 
-    hedra::complex_moebius_deform(cmdata, bc,150, deformV);
+    if (isQuat)
+        hedra::quat_moebius_deform(qmdata, 1.0, rigidityFactor, isExactMC, bc, true, deformV);
+    else
+        hedra::complex_moebius_deform(cmdata, bc,150, deformV);
     hedra::edge_mesh(deformV,D,F,EV, EF, edgeDeformV, edgeT,edgeTE);
     UpdateCurrentView();
     return true;
@@ -226,7 +232,10 @@ bool mouse_down(igl::opengl::glfw::Viewer& viewer, int button, int modifier)
         for (int i=0;i<handles.size();i++)
             b(i)=handles[i];
 
-        hedra::complex_moebius_precompute(b, isExactMC, isExactIAP, rigidityFactor, cmdata);
+        if (isQuat)
+            hedra::quat_moebius_precompute(b, qmdata);
+        else
+            hedra::complex_moebius_precompute(b, isExactMC, isExactIAP, rigidityFactor, cmdata);
         //hedra::affine_maps_precompute(V,D,F,EV,EF,EFi, FE, b, 3, affine_data);
 
         UpdateCurrentView();
@@ -297,6 +306,18 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier
             break;
         }
 
+        case '7': {
+            rigidityFactor=rigidityFactor*2.0;
+            cout<<"Rigidity factor (in next deformation): "<<rigidityFactor<<endl;
+            break;
+        }
+
+        case '8': {
+            rigidityFactor=rigidityFactor/2.0;
+            cout<<"Rigidity factor (in next deformation): "<<rigidityFactor<<endl;
+            break;
+        }
+
         case 'W':{
             hedra::polygonal_write_OFF(outputFileName, currV, D, F);
             break;
@@ -319,15 +340,23 @@ int main(int argc, char *argv[])
     cout<<"press 3 to toggle between original and deformed mesh"<<endl;
     cout<<"press 4-5 to change the sensitivity of the quality measurement"<<endl;
     cout<<"press 6 to toggle exact CETM"<<endl;
+    cout<<"press 7-8 to change the rigidity factor"<<endl;
     cout<<"Press W to save the output file"<<endl;
     cout<<"press the right button and drag the current handle for deformation"<<endl;
 
     // Load a mesh in OFF format
     outputFileName = std::string(argv[2]);
     hedra::polygonal_read_OFF(std::string(argv[1]), origV, D, F);
+    if (origV.col(2).maxCoeff()-origV.col(2).minCoeff()>10e-5) {  //if it's a 2D mesh or not
+        isQuat = true;
+        rigidityFactor = 0.5; //initial
+    }
     hedra::polygonal_edge_topology(D, F, EV, FE, EF,EFi,FEs,innerEdges);
     hedra::triangulate_mesh(D, F, polyT, polyTF);
-    hedra::complex_moebius_setup(origV,D,F,polyTF,EV,EF,EFi,FE,FEs, innerEdges, cmdata);
+    if (isQuat)
+        hedra::quat_moebius_setup(origV,D,F,polyTF,EV,EF,EFi,FE,FEs, innerEdges, qmdata);
+    else
+        hedra::complex_moebius_setup(origV,D,F,polyTF,EV,EF,EFi,FE,FEs, innerEdges, cmdata);
     hedra::edge_mesh(origV, D, F, EV, EF, edgeOrigV, edgeT, edgeTE);
 
     currV=origV;

@@ -20,6 +20,8 @@ option(LIBIGL_PNG              "Build target igl::png"              ON)
 ### Adding libIGL and Directional: choose the path to your local copy
 include(libigl)
 include(libhedra)
+find_package(Ceres REQUIRED)
+include_directories(${CERES_INCLUDE_DIRS})
 
 ### Output directories
 if(MSVC)
@@ -37,4 +39,4 @@ message("libhedra includes: ${LIBHEDRA_INCLUDE_DIRS}")
 # Add your project files
 FILE(GLOB SRCFILES *.cpp *.h)
 add_executable(${PROJECT_NAME}_bin ${SRCFILES})
-target_link_libraries(${PROJECT_NAME}_bin PUBLIC igl::core igl::glfw igl::opengl)
+target_link_libraries(${PROJECT_NAME}_bin PUBLIC igl::core igl::glfw igl::opengl ${CERES_LIBRARIES})
